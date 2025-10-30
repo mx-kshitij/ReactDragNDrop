@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<widget id="mendix.reactdraganddrop.ReactDragAndDrop" pluginWidget="true" needsEntityContext="true" offlineCapable="true"
+        supportedPlatform="Web"
+        xmlns="http://www.mendix.com/widget/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
+    <name>React Drag And Drop</name>
+    <description>A drag and drop widget for reordering items with support for tracking changes</description>
+    <icon/>
+    <properties>
+        <propertyGroup caption="Data">
+            <property key="dataSource" type="datasource" isList="true" required="true">
+                <caption>Items</caption>
+                <description>List of items to display and reorder</description>
+            </property>
+            <property key="uuidAttribute" type="attribute" dataSource="dataSource" required="true">
+                <caption>UUID Attribute</caption>
+                <description>Attribute containing the unique identifier for each item</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
+                </attributeTypes>
+            </property>
+            <property key="sortingAttribute" type="attribute" dataSource="dataSource" required="true">
+                <caption>Sorting Attribute</caption>
+                <description>Integer attribute to read the sort order (read-only in widget, updated by onDrop action)</description>
+                <attributeTypes>
+                    <attributeType name="Integer"/>
+                </attributeTypes>
+            </property>
+            <property key="changeJsonAttribute" type="attribute" onChange="onDrop" required="true">
+                <caption>Change JSON Attribute</caption>
+                <description>Context attribute to store changes as JSON</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
+                </attributeTypes>
+            </property>
+            <property key="jsonTemplate" type="string" required="false" multiline="true" defaultValue="[&#10;  {&#10;    &quot;uuid&quot;: &quot;item-identifier-1&quot;,&#10;    &quot;newIndex&quot;: 2&#10;  },&#10;  {&#10;    &quot;uuid&quot;: &quot;item-identifier-2&quot;,&#10;    &quot;newIndex&quot;: 0&#10;  }&#10;]">
+                <caption>JSON Template Reference (Read-Only)</caption>
+                <description>Reference template showing the structure of changes JSON. This is not used by the widget.</description>
+            </property>
+        </propertyGroup>
+        <propertyGroup caption="Behavior">
+            <property key="enableMultiSelect" type="boolean" defaultValue="false">
+                <caption>Enable Multi-Select</caption>
+                <description>Allow selecting multiple items by holding Shift key</description>
+            </property>
+            <property key="showDragHandle" type="boolean" defaultValue="true">
+                <caption>Show Drag Handle</caption>
+                <description>Show the drag handle icon on each item</description>
+            </property>
+            <property key="hoverHighlightColor" type="textTemplate" required="false">
+                <caption>Hover Highlight Color</caption>
+                <description>Color to highlight item on hover and multi-select (hex format, e.g., #f5f5f5)</description>
+            </property>
+            <property key="dropHighlightColor" type="textTemplate" required="false">
+                <caption>Drop Highlight Color</caption>
+                <description>Color to highlight the drop target item (hex format, e.g., #e3f2fd)</description>
+            </property>
+            <property key="onDrop" type="action" required="false">
+                <caption>On Drop Action</caption>
+                <description>Action to perform when items are dropped and reordered</description>
+            </property>
+        </propertyGroup>
+        <propertyGroup caption="Content">
+            <property key="content" type="widgets" dataSource="dataSource" required="false">
+                <caption>Content</caption>
+                <description>Widgets to display for each item</description>
+            </property>
+        </propertyGroup>
+    </properties>
+</widget>
