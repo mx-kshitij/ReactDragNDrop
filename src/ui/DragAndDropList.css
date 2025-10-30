@@ -1,3 +1,21 @@
+/**
+ * Drag and Drop List Styles
+ * 
+ * This stylesheet handles all visual styling for the drag-and-drop list component.
+ * 
+ * Key Features:
+ * - Responsive design with mobile support
+ * - CSS variables for dynamic color customization
+ * - State-based styling (dragging, drag-over, selected)
+ * - Smooth transitions for better UX
+ */
+
+/* ==================== CONTAINER STYLES ==================== */
+
+/**
+ * Main container for the drag-and-drop list
+ * Sets up the CSS variable for hover highlight color
+ */
 .drag-and-drop-list {
     width: 100%;
     padding: 16px;
@@ -5,6 +23,9 @@
     --hover-highlight-color: #f5f5f5;
 }
 
+/**
+ * Empty state message shown when no items are available
+ */
 .drag-and-drop-empty {
     text-align: center;
     color: #999;
@@ -12,12 +33,26 @@
     font-size: 14px;
 }
 
+/* ==================== LIST ITEM STYLES ==================== */
+
+/**
+ * List container - removes default list styling
+ */
 .drag-and-drop-items {
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
+/**
+ * Base styles for draggable items
+ * 
+ * Features:
+ * - Flex layout for horizontal alignment
+ * - Subtle border and background
+ * - Cursor shows grab icon
+ * - Smooth transitions for state changes
+ */
 .drag-and-drop-item {
     display: flex;
     align-items: center;
@@ -31,12 +66,23 @@
     transition: all 0.2s ease-in-out;
 }
 
+/**
+ * Hover state - provides visual feedback to user
+ */
 .drag-and-drop-item:hover {
     background-color: #fafafa;
     border-color: #d0d0d0;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
+/**
+ * Dragging state - item being dragged
+ * 
+ * Visual indicators:
+ * - Reduced opacity to show item is being moved
+ * - Blue background to distinguish from normal state
+ * - Cursor changes to grabbing
+ */
 .drag-and-drop-item.dragging {
     opacity: 0.5;
     background-color: #e3f2fd;
@@ -44,23 +90,47 @@
     cursor: grabbing;
 }
 
+/**
+ * Drop target state - item being dragged over
+ * 
+ * Only applies border and basic styles
+ * Background color is set via inline styles from prop value
+ * This ensures !important doesn't override user-configured colors
+ */
 .drag-and-drop-item.drag-over {
     border-color: transparent !important;
     border-style: solid !important;
     transform: none !important;
 }
 
+/**
+ * Selected state - item selected for multi-drag
+ * 
+ * Green highlight shows the item is selected
+ * Inset box-shadow provides depth
+ */
 .drag-and-drop-item.selected {
     background-color: #c8e6c9;
     border-color: #4caf50;
     box-shadow: inset 0 0 0 2px #4caf50;
 }
 
+/**
+ * Selected item hover state
+ */
 .drag-and-drop-item.selected:hover {
     background-color: #b5ddb5;
     border-color: #45a049;
 }
 
+/* ==================== DRAG HANDLE ICON ==================== */
+
+/**
+ * Drag handle icon styling
+ * 
+ * Shows users where to grab to initiate drag
+ * Optional - can be hidden with showDragHandle prop
+ */
 .drag-handle {
     display: inline-flex;
     align-items: center;
@@ -78,10 +148,23 @@
     cursor: grabbing;
 }
 
+/**
+ * Drag handle color changes when item is being dragged
+ */
 .drag-and-drop-item.dragging .drag-handle {
     color: #2196f3;
 }
 
+/* ==================== CONTENT AREA ==================== */
+
+/**
+ * Item content area styling
+ * 
+ * Features:
+ * - Flex: 1 to take remaining space
+ * - Text truncation with ellipsis
+ * - user-select: none prevents text selection during drag
+ */
 .drag-item-content {
     flex: 1;
     overflow: hidden;
@@ -92,6 +175,12 @@
     user-select: none;
 }
 
+/**
+ * Item index/count display
+ * 
+ * Shows the position number of each item in the list
+ * Styled as a badge with rounded corners
+ */
 .drag-item-index {
     display: inline-flex;
     align-items: center;
@@ -106,7 +195,15 @@
     color: #666;
 }
 
-/* When showDragHandle is false */
+/* ==================== NO-HANDLE VARIANT ==================== */
+
+/**
+ * Styles applied when showDragHandle is false
+ * 
+ * Creates a minimal appearance without the drag handle
+ * Items show only content with subtle hover effects
+ * Uses CSS variable for hover color
+ */
 .drag-and-drop-item.no-handle {
     border: none;
     padding: 0;
@@ -115,6 +212,10 @@
     margin: 8px 0;
 }
 
+/**
+ * Hover effect for no-handle variant
+ * Uses CSS variable --hover-highlight-color from props
+ */
 .drag-and-drop-item.no-handle:hover {
     background-color: var(--hover-highlight-color, #f5f5f5);
     border-color: transparent;
@@ -123,6 +224,10 @@
     padding: 10px 12px;
 }
 
+/**
+ * Selected state for no-handle variant
+ * Also uses the hover highlight color for consistency
+ */
 .drag-and-drop-item.no-handle.selected {
     background-color: var(--hover-highlight-color, #f5f5f5);
     border-color: transparent;
@@ -135,8 +240,38 @@
     background-color: var(--hover-highlight-color, #f5f5f5);
 }
 
+/**
+ * Hide index when no-handle variant is active
+ */
 .drag-and-drop-item.no-handle .drag-item-index {
     display: none;
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+
+/**
+ * Mobile/tablet responsive styles
+ * Adjusts padding, margins, and sizing for smaller screens
+ */
+@media (max-width: 768px) {
+    .drag-and-drop-list {
+        padding: 12px;
+    }
+
+    .drag-and-drop-item {
+        padding: 10px 12px;
+        margin: 6px 0;
+    }
+
+    .drag-handle {
+        width: 20px;
+        height: 20px;
+        margin-right: 8px;
+    }
+
+    .drag-item-content {
+        font-size: 13px;
+    }
 }
 
 /* Static card display (when showDragHandle is false) */
