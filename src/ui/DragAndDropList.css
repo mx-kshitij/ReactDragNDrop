@@ -51,7 +51,10 @@
  * - Flex layout for horizontal alignment
  * - Subtle border and background
  * - Cursor shows grab icon
- * - Smooth transitions for state changes
+ * - Smooth transitions for all properties (background, border, shadow)
+ * 
+ * Note: Using 0.3s duration for smooth, natural transitions
+ * that feel responsive but not jarring during drag operations
  */
 .drag-and-drop-item {
     display: flex;
@@ -63,11 +66,12 @@
     border-radius: 4px;
     cursor: grab;
     user-select: none;
-    transition: all 0.2s ease-in-out;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /**
  * Hover state - provides visual feedback to user
+ * Smooth transition from normal to hover state
  */
 .drag-and-drop-item:hover {
     background-color: #fafafa;
@@ -93,14 +97,12 @@
 /**
  * Drop target state - item being dragged over
  * 
- * Only applies border and basic styles
- * Background color is set via inline styles from prop value
- * This ensures !important doesn't override user-configured colors
+ * Applies a smooth border highlight without removing/adding properties
+ * The inline style for background is smoothly transitioned by CSS
  */
 .drag-and-drop-item.drag-over {
-    border-color: transparent !important;
-    border-style: solid !important;
-    transform: none !important;
+    border-color: transparent;
+    border-style: solid;
 }
 
 /**

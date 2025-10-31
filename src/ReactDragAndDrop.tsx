@@ -16,6 +16,7 @@ import "./ui/ReactDragAndDrop.css";
  * - uuidAttribute: Unique identifier attribute
  * - sortingAttribute: Integer attribute for sort order
  * - changeJsonAttribute: Context attribute to receive JSON changes
+ * - listId: Unique identifier for this list (for cross-list dragging)
  * - enableMultiSelect: Enable multi-item dragging
  * - showDragHandle: Show/hide drag handle icon
  * - hoverHighlightColor: Color for hover/select state
@@ -28,6 +29,7 @@ export function ReactDragAndDrop({
     uuidAttribute,
     sortingAttribute,
     changeJsonAttribute,
+    listId,
     enableMultiSelect,
     showDragHandle,
     hoverHighlightColor,
@@ -40,6 +42,7 @@ export function ReactDragAndDrop({
             uuidAttribute={uuidAttribute}
             sortingAttribute={sortingAttribute}
             changeJsonAttribute={changeJsonAttribute}
+            listId={listId?.value ?? "default-list"}
             enableMultiSelect={enableMultiSelect}
             showDragHandle={showDragHandle}
             hoverHighlightColor={hoverHighlightColor}

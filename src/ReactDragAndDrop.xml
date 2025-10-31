@@ -33,12 +33,16 @@
                     <attributeType name="String"/>
                 </attributeTypes>
             </property>
-            <property key="jsonTemplate" type="string" required="false" multiline="true" defaultValue="[&#10;  {&#10;    &quot;uuid&quot;: &quot;item-identifier-1&quot;,&#10;    &quot;newIndex&quot;: 2&#10;  },&#10;  {&#10;    &quot;uuid&quot;: &quot;item-identifier-2&quot;,&#10;    &quot;newIndex&quot;: 0&#10;  }&#10;]">
+            <property key="jsonTemplate" type="string" required="false" multiline="true" defaultValue="[&#10;  {&#10;    &quot;uuid&quot;: &quot;item-1&quot;,&#10;    &quot;newIndex&quot;: 0,&#10;    &quot;sourceListId&quot;: &quot;list1&quot;,&#10;    &quot;targetListId&quot;: &quot;list1&quot;&#10;  },&#10;  {&#10;    &quot;uuid&quot;: &quot;item-2&quot;,&#10;    &quot;newIndex&quot;: 1,&#10;    &quot;sourceListId&quot;: &quot;list1&quot;,&#10;    &quot;targetListId&quot;: &quot;list1&quot;&#10;  }&#10;]">
                 <caption>JSON Template Reference (Read-Only)</caption>
-                <description>Reference template showing the structure of changes JSON. This is not used by the widget.</description>
+                <description>Reference template showing the structure of changes JSON. Array of changes with uuid, newIndex, sourceListId, and targetListId. For cross-list moves, sourceListId != targetListId. Backend should re-index source list items not appearing in the changes array.</description>
             </property>
         </propertyGroup>
         <propertyGroup caption="Behavior">
+            <property key="listId" type="textTemplate" required="true">
+                <caption>List Identifier</caption>
+                <description>Unique identifier for this list (e.g., 'list1', 'list2'). Required for cross-list dragging between multiple widgets.</description>
+            </property>
             <property key="enableMultiSelect" type="boolean" defaultValue="false">
                 <caption>Enable Multi-Select</caption>
                 <description>Allow selecting multiple items by holding Shift key</description>
