@@ -47,6 +47,14 @@
                 <caption>Allowed Lists</caption>
                 <description>Comma-separated list IDs that can accept items from this list (e.g., 'list2,list3'). Leave empty to allow drag-and-drop only within this list.</description>
             </property>
+            <property key="dropPosition" type="enumeration" defaultValue="after">
+                <caption>Drop Position</caption>
+                <description>Position to drop items relative to the target item</description>
+                <enumerationValues>
+                    <enumerationValue key="before">Before</enumerationValue>
+                    <enumerationValue key="after">After</enumerationValue>
+                </enumerationValues>
+            </property>
             <property key="enableMultiSelect" type="boolean" defaultValue="false">
                 <caption>Enable Multi-Select</caption>
                 <description>Allow selecting multiple items by holding Shift key</description>

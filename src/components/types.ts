@@ -1,6 +1,14 @@
 import { ListValue, ListWidgetValue, ListAttributeValue, EditableValue, ObjectItem, DynamicValue } from "mendix";
 
 /**
+ * Enumeration for drop position relative to target item
+ */
+export enum DropPosition {
+    Before = "before",
+    After = "after",
+}
+
+/**
  * Props interface for the DragAndDropList component
  * Defines all properties that can be passed to the component
  */
@@ -17,6 +25,8 @@ export interface DragAndDropListProps {
     listId: string;
     /** Comma-separated list IDs that can accept items from this list. Leave empty to restrict drops to same list only. */
     allowedLists?: string;
+    /** Position to drop items relative to the target item (before or after) */
+    dropPosition: DropPosition;
     /** Enable/disable multi-select functionality with Shift+click */
     enableMultiSelect: boolean;
     /** Show/hide the drag handle icon (visual only, doesn't affect drag functionality) */

@@ -106,6 +106,22 @@
 }
 
 /**
+ * Drop position indicators - visual cues for "before" or "after" drops
+ * 
+ * "before": Shows a border on the top edge of the item
+ * "after": Shows a border on the bottom edge of the item
+ * 
+ * This provides clear visual feedback about where the item will be inserted
+ */
+.drag-and-drop-item.drop-before {
+    border-top: 3px solid #2196f3;
+}
+
+.drag-and-drop-item.drop-after {
+    border-bottom: 3px solid #2196f3;
+}
+
+/**
  * Selected state - item selected for multi-drag
  * 
  * Green highlight shows the item is selected

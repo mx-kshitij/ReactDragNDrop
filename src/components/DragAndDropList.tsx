@@ -1,6 +1,6 @@
 import { ReactElement, createElement, useState, useEffect } from "react";
 import "../ui/DragAndDropList.css";
-import { DragItem, ChangeRecord, DragAndDropListProps } from "./types";
+import { DragItem, ChangeRecord, DragAndDropListProps, DropPosition } from "./types";
 import {
     isDropAllowed,
     isItemInAllowedLists,
@@ -33,6 +33,7 @@ export function DragAndDropList({
     changeJsonAttribute,
     listId,
     allowedLists,
+    dropPosition,
     enableMultiSelect,
     showDragHandle,
     hoverHighlightColor,
@@ -44,6 +45,7 @@ export function DragAndDropList({
     const [draggedItems, setDraggedItems] = useState<DragItem[]>([]);
     const [draggedOverItem, setDraggedOverItem] = useState<DragItem | null>(null);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    const [dropIndicatorPosition, setDropIndicatorPosition] = useState<'before' | 'after' | null>(null);
 
     /**
      * Initialize items from datasource
@@ -348,9 +350,14 @@ export function DragAndDropList({
                 // setItems will be updated when datasource changes
             } else {
                 // Non-empty list case - insert at draggedOverItem position
-                const draggedOverIndex = newItems.findIndex(i => i.uuid === draggedOverItem?.uuid);
+                let draggedOverIndex = newItems.findIndex(i => i.uuid === draggedOverItem?.uuid);
 
                 if (draggedOverIndex > -1) {
+                    // Adjust insertion point based on dropPosition
+                    // "before" inserts at draggedOverIndex
+                    // "after" inserts after draggedOverIndex (dropPosition + 1)
+                    const insertPointIndex = dropPosition === DropPosition.After ? draggedOverIndex + 1 : draggedOverIndex;
+                    
                     // For cross-list drops, we need to send newIndex for ALL items:
                     // 1. Target list items (both new and shifted existing)
                     // 2. Source list items (remaining items with re-calculated indices)
@@ -359,7 +366,7 @@ export function DragAndDropList({
                     const virtualItems: { uuid: string; isNew: boolean }[] = [];
                     
                     // Add existing items up to insert point
-                    for (let i = 0; i < draggedOverIndex; i++) {
+                    for (let i = 0; i < insertPointIndex; i++) {
                         virtualItems.push({ uuid: newItems[i].uuid, isNew: false });
                     }
                     
@@ -369,7 +376,7 @@ export function DragAndDropList({
                     });
                     
                     // Add remaining items
-                    for (let i = draggedOverIndex; i < newItems.length; i++) {
+                    for (let i = insertPointIndex; i < newItems.length; i++) {
                         virtualItems.push({ uuid: newItems[i].uuid, isNew: false });
                     }
 
@@ -449,7 +456,7 @@ export function DragAndDropList({
 
             // Create a new array with reordered items
             const newItems = [...items];
-            const draggedOverIndex = newItems.findIndex(i => i.uuid === draggedOverItemSafe.uuid);
+            let draggedOverIndex = newItems.findIndex(i => i.uuid === draggedOverItemSafe.uuid);
 
             if (draggedOverIndex > -1) {
                 // Remove all dragged items from their current positions
@@ -469,10 +476,14 @@ export function DragAndDropList({
                     removed.unshift(...newItems.splice(idx, 1));
                 });
 
-                // Insert all items at the target position
-                const insertIndex = newItems.findIndex(i => i.uuid === draggedOverItemSafe.uuid);
+                // Adjust insertion point based on dropPosition
+                // "before" inserts at draggedOverIndex
+                // "after" inserts after draggedOverIndex (draggedOverIndex + 1)
+                // After removing items, we may need to adjust the index if removal shifted it
+                let insertIndex = newItems.findIndex(i => i.uuid === draggedOverItemSafe.uuid);
                 if (insertIndex > -1) {
-                    newItems.splice(insertIndex, 0, ...removed);
+                    const finalInsertIndex = dropPosition === DropPosition.After ? insertIndex + 1 : insertIndex;
+                    newItems.splice(finalInsertIndex, 0, ...removed);
                 }
 
                 // Calculate changes and generate JSON for onDrop action
@@ -633,6 +644,8 @@ export function DragAndDropList({
                             className={`drag-and-drop-item ${
                                 checkIsDraggedItem(item, draggedItems) ? "dragging" : ""
                             } ${draggedOverItem?.uuid === item.uuid ? "drag-over" : ""} ${
+                                draggedOverItem?.uuid === item.uuid && dropIndicatorPosition ? `drop-${dropIndicatorPosition}` : ""
+                            } ${
                                 selectedItems.has(item.uuid) ? "selected" : ""
                             } ${!showDragHandle ? "no-handle" : ""} ${
                                 item.listName ? `list-${item.listName}` : ""
@@ -674,21 +687,29 @@ export function DragAndDropList({
                                 // Get allowed lists from the dragged element's attributes
                                 const { sourceListId, allowedLists: sourceAllowedLists } = getDragContextFromDOM();
                                 
+                                // Determine drop position based on cursor location (top or bottom half of item)
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const midpoint = rect.top + rect.height / 2;
+                                const calculatedDropPosition = e.clientY < midpoint ? 'before' : 'after';
+                                
                                 // Always allow same-list drops
                                 if (sourceListId === item.listName) {
                                     e.dataTransfer.dropEffect = "move";
                                     handleDragOver(item, e);
+                                    setDropIndicatorPosition(dropPosition === DropPosition.Before ? 'before' : calculatedDropPosition);
                                 } else {
                                     // Cross-list drop - check if target is in allowed lists
                                     const isAllowed = isItemInAllowedLists(item.listName, sourceAllowedLists);
                                     if (isAllowed) {
                                         e.dataTransfer.dropEffect = "move";
                                         handleDragOver(item, e);
+                                        setDropIndicatorPosition(dropPosition === DropPosition.Before ? 'before' : calculatedDropPosition);
                                     } else {
                                         e.dataTransfer.dropEffect = "none";
                                         // Clear highlight if this was previously the drag target
                                         if (draggedOverItem?.uuid === item.uuid) {
                                             setDraggedOverItem(null);
+                                            setDropIndicatorPosition(null);
                                         }
                                     }
                                 }
@@ -702,6 +723,7 @@ export function DragAndDropList({
                                 e.stopPropagation();
                                 if (draggedOverItem?.uuid === item.uuid) {
                                     setDraggedOverItem(null);
+                                    setDropIndicatorPosition(null);
                                 }
                             }}
                             /**
@@ -720,6 +742,7 @@ export function DragAndDropList({
                             onDragEnd={(e) => {
                                 setDraggedItems([]);
                                 setDraggedOverItem(null);
+                                setDropIndicatorPosition(null);
                                 // Clear drag context attributes from the element
                                 clearDragContextFromDOM(e.currentTarget);
                             }}
