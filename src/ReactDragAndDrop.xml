@@ -43,6 +43,10 @@
                 <caption>List Identifier</caption>
                 <description>Unique identifier for this list (e.g., 'list1', 'list2'). Required for cross-list dragging between multiple widgets.</description>
             </property>
+            <property key="allowedLists" type="textTemplate" required="false">
+                <caption>Allowed Lists</caption>
+                <description>Comma-separated list IDs that can accept items from this list (e.g., 'list2,list3'). Leave empty to allow drag-and-drop only within this list.</description>
+            </property>
             <property key="enableMultiSelect" type="boolean" defaultValue="false">
                 <caption>Enable Multi-Select</caption>
                 <description>Allow selecting multiple items by holding Shift key</description>

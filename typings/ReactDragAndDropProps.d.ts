@@ -18,6 +18,7 @@ export interface ReactDragAndDropContainerProps {
     changeJsonAttribute: EditableValue<string>;
     jsonTemplate: string;
     listId: DynamicValue<string>;
+    allowedLists?: DynamicValue<string>;
     enableMultiSelect: boolean;
     showDragHandle: boolean;
     hoverHighlightColor?: DynamicValue<string>;
@@ -41,6 +42,7 @@ export interface ReactDragAndDropPreviewProps {
     changeJsonAttribute: string;
     jsonTemplate: string;
     listId: string;
+    allowedLists: string;
     enableMultiSelect: boolean;
     showDragHandle: boolean;
     hoverHighlightColor: string;
