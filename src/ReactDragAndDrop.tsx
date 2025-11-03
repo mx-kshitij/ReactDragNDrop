@@ -1,6 +1,5 @@
 import { ReactElement, createElement } from "react";
 import { DragAndDropList } from "./components/DragAndDropList";
-import { DropPosition } from "./components/types";
 
 import { ReactDragAndDropContainerProps } from "../typings/ReactDragAndDropProps";
 
@@ -19,7 +18,7 @@ import "./ui/ReactDragAndDrop.css";
  * - changeJsonAttribute: Context attribute to receive JSON changes
  * - listId: Unique identifier for this list (for cross-list dragging)
  * - allowedLists: Comma-separated list IDs that can accept items from this list
- * - dropPosition: Position to drop items (before or after target item)
+ * - allowDropOn: Allow items to be dropped ON target items
  * - enableMultiSelect: Enable multi-item dragging
  * - showDragHandle: Show/hide drag handle icon
  * - hoverHighlightColor: Color for hover/select state
@@ -34,11 +33,13 @@ export function ReactDragAndDrop({
     changeJsonAttribute,
     listId,
     allowedLists,
-    dropPosition,
+    allowDropOn,
     enableMultiSelect,
     showDragHandle,
     hoverHighlightColor,
-    dropHighlightColor,
+    dropBeforeColor,
+    dropOnColor,
+    dropAfterColor,
     content,
 }: ReactDragAndDropContainerProps): ReactElement {
     return (
@@ -49,11 +50,13 @@ export function ReactDragAndDrop({
             changeJsonAttribute={changeJsonAttribute}
             listId={listId?.value ?? "default-list"}
             allowedLists={allowedLists?.value}
-            dropPosition={dropPosition as DropPosition}
+            allowDropOn={allowDropOn}
             enableMultiSelect={enableMultiSelect}
             showDragHandle={showDragHandle}
             hoverHighlightColor={hoverHighlightColor}
-            dropHighlightColor={dropHighlightColor}
+            dropBeforeColor={dropBeforeColor}
+            dropOnColor={dropOnColor}
+            dropAfterColor={dropAfterColor}
             content={content}
         />
     );

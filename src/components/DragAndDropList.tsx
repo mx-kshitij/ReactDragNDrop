@@ -1,6 +1,6 @@
 import { ReactElement, createElement, useState, useEffect } from "react";
 import "../ui/DragAndDropList.css";
-import { DragItem, ChangeRecord, DragAndDropListProps, DropPosition } from "./types";
+import { DragItem, ChangeRecord, DragAndDropListProps, DropType } from "./types";
 import {
     isDropAllowed,
     isItemInAllowedLists,
@@ -33,11 +33,13 @@ export function DragAndDropList({
     changeJsonAttribute,
     listId,
     allowedLists,
-    dropPosition,
+    allowDropOn,
     enableMultiSelect,
     showDragHandle,
     hoverHighlightColor,
-    dropHighlightColor,
+    dropBeforeColor,
+    dropOnColor,
+    dropAfterColor,
     content,
 }: DragAndDropListProps): ReactElement {
     // State management
@@ -45,7 +47,8 @@ export function DragAndDropList({
     const [draggedItems, setDraggedItems] = useState<DragItem[]>([]);
     const [draggedOverItem, setDraggedOverItem] = useState<DragItem | null>(null);
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-    const [dropIndicatorPosition, setDropIndicatorPosition] = useState<'before' | 'after' | null>(null);
+    const [dropIndicatorPosition, setDropIndicatorPosition] = useState<'before' | 'after' | 'on' | null>(null);
+    const [currentDropType, setCurrentDropType] = useState<'before' | 'after' | 'on' | null>(null);
 
     /**
      * Initialize items from datasource
@@ -215,6 +218,39 @@ export function DragAndDropList({
     };
 
     /**
+     * Determine the drop zone based on cursor position within item
+     * 
+     * When allowDropOn is enabled, divides item into 3 zones:
+     * - Top 1/3: 'before'
+     * - Middle 1/3: 'on'
+     * - Bottom 1/3: 'after'
+     * 
+     * When allowDropOn is disabled, uses 2 zones (50/50 split):
+     * - Top half: 'before'
+     * - Bottom half: 'after'
+     */
+    const getDropZone = (element: HTMLElement, clientY: number): 'before' | 'after' | 'on' => {
+        const rect = element.getBoundingClientRect();
+        const height = rect.height;
+        const offsetY = clientY - rect.top;
+        
+        if (!allowDropOn) {
+            // 2-zone mode: before/after
+            return offsetY < height / 2 ? 'before' : 'after';
+        }
+        
+        // 3-zone mode: before/on/after
+        const thirdHeight = height / 3;
+        if (offsetY < thirdHeight) {
+            return 'before';
+        } else if (offsetY < thirdHeight * 2) {
+            return 'on';
+        } else {
+            return 'after';
+        }
+    };
+
+    /**
      * Handle drop event and reorder items (same-list or cross-list)
      * 
      * Process:
@@ -353,93 +389,135 @@ export function DragAndDropList({
                 let draggedOverIndex = newItems.findIndex(i => i.uuid === draggedOverItem?.uuid);
 
                 if (draggedOverIndex > -1) {
-                    // Adjust insertion point based on dropPosition
-                    // "before" inserts at draggedOverIndex
-                    // "after" inserts after draggedOverIndex (dropPosition + 1)
-                    const insertPointIndex = dropPosition === DropPosition.After ? draggedOverIndex + 1 : draggedOverIndex;
-                    
-                    // For cross-list drops, we need to send newIndex for ALL items:
-                    // 1. Target list items (both new and shifted existing)
-                    // 2. Source list items (remaining items with re-calculated indices)
-                    
-                    // Create a virtual array showing where items will be after insertion
-                    const virtualItems: { uuid: string; isNew: boolean }[] = [];
-                    
-                    // Add existing items up to insert point
-                    for (let i = 0; i < insertPointIndex; i++) {
-                        virtualItems.push({ uuid: newItems[i].uuid, isNew: false });
-                    }
-                    
-                    // Add the dragged items (in order they were dragged)
-                    itemsBeingDragged.forEach(uuid => {
-                        virtualItems.push({ uuid: uuid, isNew: true });
-                    });
-                    
-                    // Add remaining items
-                    for (let i = insertPointIndex; i < newItems.length; i++) {
-                        virtualItems.push({ uuid: newItems[i].uuid, isNew: false });
-                    }
-
-                    // Generate changes for ALL items that need re-indexing
-                    const allChanges: ChangeRecord[] = [];
-                    
-                    // Target list changes: all items in virtual array
-                    virtualItems.forEach((item, newIndex) => {
-                        if (item.isNew) {
-                            // New dragged items from source list
+                    // For "on" drops: no rearrangement in target list
+                    if (currentDropType === 'on') {
+                        // Create change records for items dropped ON without rearranging target list
+                        const allChanges: ChangeRecord[] = [];
+                        
+                        // Add changes for dragged items (dropped ON target)
+                        itemsBeingDragged.forEach(uuid => {
                             allChanges.push({
-                                uuid: item.uuid,
-                                newIndex: newIndex,
+                                uuid: uuid,
+                                newIndex: null, // No index for "on" drops
                                 sourceListId: sourceListId,
                                 targetListId: listId,
+                                dropType: DropType.On,
+                                targetItemUuid: draggedOverItem?.uuid, // UUID of the item dropped ON
                             });
-                        } else {
-                            // Existing items in target list that may have shifted
-                            const existingItem = newItems.find(i => i.uuid === item.uuid);
-                            if (existingItem && existingItem.originalIndex !== newIndex) {
+                        });
+
+                        // For cross-list "on" drops, we still need to re-index the source list
+                        // Extract and process source list for re-indexing remaining items
+                        if (crossListData?.sourceListAllItems) {
+                            const sourceAllItems = crossListData.sourceListAllItems;
+                            const movedUuids = new Set(itemsBeingDragged);
+                            
+                            // Get remaining items (not being moved) sorted by original index
+                            const remainingItems = sourceAllItems
+                                .filter((item: { uuid: string; originalIndex: number }) => !movedUuids.has(item.uuid))
+                                .sort((a: { uuid: string; originalIndex: number }, b: { uuid: string; originalIndex: number }) => a.originalIndex - b.originalIndex);
+                            
+                            // Re-index remaining items in source list
+                            remainingItems.forEach((item: { uuid: string; originalIndex: number }, newIndex: number) => {
                                 allChanges.push({
                                     uuid: item.uuid,
                                     newIndex: newIndex,
-                                    sourceListId: listId,
-                                    targetListId: listId,
+                                    sourceListId: sourceListId,
+                                    targetListId: sourceListId,
                                 });
-                            }
-                        }
-                    });
-
-                    // Source list changes: remaining items need to be re-indexed
-                    // Extract and process source list for re-indexing remaining items
-                    if (crossListData?.sourceListAllItems) {
-                        const sourceAllItems = crossListData.sourceListAllItems;
-                        const movedUuids = new Set(itemsBeingDragged);
-                        
-                        // Get remaining items (not being moved) sorted by original index
-                        const remainingItems = sourceAllItems
-                            .filter((item: { uuid: string; originalIndex: number }) => !movedUuids.has(item.uuid))
-                            .sort((a: { uuid: string; originalIndex: number }, b: { uuid: string; originalIndex: number }) => a.originalIndex - b.originalIndex);
-                        
-                        // Re-index remaining items
-                        remainingItems.forEach((item: { uuid: string; originalIndex: number }, newIndex: number) => {
-                            allChanges.push({
-                                uuid: item.uuid,
-                                newIndex: newIndex,
-                                sourceListId: sourceListId,
-                                targetListId: sourceListId, // Same list, just re-indexed
                             });
+                        }
+
+                        if (allChanges.length > 0) {
+                            changeJsonAttribute.setValue(JSON.stringify(allChanges));
+                        }
+                    } else {
+                        // For "before"/"after" drops: normal rearrangement
+                        // Determine insertion point based on drop type (cursor position)
+                        // currentDropType comes from the cursor position during drag-over
+                        let insertPointIndex = draggedOverIndex;
+                        
+                        if (currentDropType === 'after') {
+                            insertPointIndex = draggedOverIndex + 1;
+                        }
+                        // else currentDropType === 'before', insertPointIndex stays at draggedOverIndex
+                        
+                        // For cross-list drops, we need to send newIndex for ALL items:
+                        // 1. Target list items (both new and shifted existing)
+                        // 2. Source list items (remaining items with re-calculated indices)
+                        
+                        // Create a virtual array showing where items will be after insertion
+                        const virtualItems: { uuid: string; isNew: boolean; dropType?: string }[] = [];
+                        
+                        // Add existing items up to insert point
+                        for (let i = 0; i < insertPointIndex; i++) {
+                            virtualItems.push({ uuid: newItems[i].uuid, isNew: false });
+                        }
+                        
+                        // Add the dragged items (in order they were dragged)
+                        itemsBeingDragged.forEach(uuid => {
+                            virtualItems.push({ uuid: uuid, isNew: true, dropType: currentDropType || 'after' });
                         });
                         
-                        if (!remainingItems || remainingItems.length === 0) {
-                            console.error("Failed to calculate remaining items for source list re-indexing");
+                        // Add remaining items
+                        for (let i = insertPointIndex; i < newItems.length; i++) {
+                            virtualItems.push({ uuid: newItems[i].uuid, isNew: false });
+                        }
+
+                        // Generate changes for ALL items that need re-indexing
+                        const allChanges: ChangeRecord[] = [];
+                        
+                        // Target list changes: all items in virtual array
+                        virtualItems.forEach((item, newIndex) => {
+                            if (item.isNew) {
+                                // New dragged items from source list
+                                const changeRecord: ChangeRecord = {
+                                    uuid: item.uuid,
+                                    newIndex: newIndex,
+                                    sourceListId: sourceListId,
+                                    targetListId: listId,
+                                };
+                                allChanges.push(changeRecord);
+                            } else {
+                                // Existing items in target list that may have shifted
+                                const existingItem = newItems.find(i => i.uuid === item.uuid);
+                                if (existingItem && existingItem.originalIndex !== newIndex) {
+                                    allChanges.push({
+                                        uuid: item.uuid,
+                                        newIndex: newIndex,
+                                        sourceListId: listId,
+                                        targetListId: listId,
+                                    });
+                                }
+                            }
+                        });
+
+                        // Source list changes: remaining items need to be re-indexed
+                        // Extract and process source list for re-indexing remaining items
+                        if (crossListData?.sourceListAllItems) {
+                            const sourceAllItems = crossListData.sourceListAllItems;
+                            const movedUuids = new Set(itemsBeingDragged);
+                            
+                            // Get remaining items (not being moved) sorted by original index
+                            const remainingItems = sourceAllItems
+                                .filter((item: { uuid: string; originalIndex: number }) => !movedUuids.has(item.uuid))
+                                .sort((a: { uuid: string; originalIndex: number }, b: { uuid: string; originalIndex: number }) => a.originalIndex - b.originalIndex);
+                            
+                            // Re-index remaining items
+                            remainingItems.forEach((item: { uuid: string; originalIndex: number }, newIndex: number) => {
+                                allChanges.push({
+                                    uuid: item.uuid,
+                                    newIndex: newIndex,
+                                    sourceListId: sourceListId,
+                                    targetListId: sourceListId, // Same list, just re-indexed
+                                });
+                            });
+                        }
+
+                        if (allChanges.length > 0) {
+                            changeJsonAttribute.setValue(JSON.stringify(allChanges));
                         }
                     }
-
-                    if (allChanges.length > 0) {
-                        changeJsonAttribute.setValue(JSON.stringify(allChanges));
-                    }
-
-                    // Note: Items will appear in the list after datasource updates from the onDrop action
-                    // Don't add temporary items here to avoid ObjectItem validation errors
-                    // setItems will be updated when datasource changes
                 }
             }
         } else {
@@ -476,30 +554,57 @@ export function DragAndDropList({
                     removed.unshift(...newItems.splice(idx, 1));
                 });
 
-                // Adjust insertion point based on dropPosition
-                // "before" inserts at draggedOverIndex
-                // "after" inserts after draggedOverIndex (draggedOverIndex + 1)
-                // After removing items, we may need to adjust the index if removal shifted it
-                let insertIndex = newItems.findIndex(i => i.uuid === draggedOverItemSafe.uuid);
-                if (insertIndex > -1) {
-                    const finalInsertIndex = dropPosition === DropPosition.After ? insertIndex + 1 : insertIndex;
-                    newItems.splice(finalInsertIndex, 0, ...removed);
+                // For "on" drops: don't rearrange, just put items back in original positions
+                // For "before"/"after" drops: rearrange items
+                if (currentDropType !== 'on') {
+                    // Determine insertion point based on drop type (cursor position)
+                    // currentDropType comes from the cursor position during drag-over
+                    let insertIndex = newItems.findIndex(i => i.uuid === draggedOverItemSafe.uuid);
+                    if (insertIndex > -1) {
+                        let finalInsertIndex = insertIndex;
+                        
+                        if (currentDropType === 'after') {
+                            finalInsertIndex = insertIndex + 1;
+                        }
+                        // else currentDropType === 'before', finalInsertIndex stays at insertIndex
+                        
+                        newItems.splice(finalInsertIndex, 0, ...removed);
+                    }
+                } else {
+                    // For "on" drops: put all removed items back at the end (restore original state)
+                    // This ensures no rearrangement happens
+                    newItems.push(...removed);
                 }
 
                 // Calculate changes and generate JSON for onDrop action
                 const changes: ChangeRecord[] = [];
 
-                newItems.forEach((item, newIndex) => {
-                    // Track changes if position changed from original
-                    if (item.originalIndex !== newIndex) {
+                if (currentDropType === 'on') {
+                    // For "on" drops: No rearrangement, just track that items were dropped ON target
+                    draggedItems.forEach(draggedItem => {
                         changes.push({
-                            uuid: item.uuid,
-                            newIndex: newIndex,
+                            uuid: draggedItem.uuid,
+                            newIndex: null, // No index change for "on" drops
                             sourceListId: listId,
                             targetListId: listId,
+                            dropType: DropType.On,
+                            targetItemUuid: draggedOverItemSafe.uuid, // UUID of the item dropped ON
                         });
-                    }
-                });
+                    });
+                } else {
+                    // For "before"/"after" drops: Track position changes
+                    newItems.forEach((item, newIndex) => {
+                        // Track changes if position changed from original
+                        if (item.originalIndex !== newIndex) {
+                            changes.push({
+                                uuid: item.uuid,
+                                newIndex: newIndex,
+                                sourceListId: listId,
+                                targetListId: listId,
+                            });
+                        }
+                    });
+                }
 
                 /**
                  * Set the JSON changes to context attribute
@@ -507,7 +612,7 @@ export function DragAndDropList({
                  * Mendix automatically triggers the onChange="onDrop" action
                  * when changeJsonAttribute is updated
                  * 
-                 * JSON format: [{ uuid: string, newIndex: number, sourceListId: string, targetListId: string }, ...]
+                 * JSON format: [{ uuid: string, newIndex?: number, sourceListId: string, targetListId: string, dropType?: string }, ...]
                  */
                 if (changes.length > 0) {
                     changeJsonAttribute.setValue(JSON.stringify(changes));
@@ -667,7 +772,11 @@ export function DragAndDropList({
                                 backgroundColor: selectedItems.has(item.uuid)
                                     ? undefined
                                     : draggedOverItem?.uuid === item.uuid
-                                        ? (dropHighlightColor?.value || '#e3f2fd')
+                                        ? (dropIndicatorPosition === 'before'
+                                            ? (dropBeforeColor?.value || '#e3f2fd')
+                                            : dropIndicatorPosition === 'on'
+                                            ? (dropOnColor?.value || '#c8e6c9')
+                                            : (dropAfterColor?.value || '#fff9c4'))
                                         : 'transparent',
                                 padding: '10px 12px',
                                 borderRadius: '4px',
@@ -687,29 +796,30 @@ export function DragAndDropList({
                                 // Get allowed lists from the dragged element's attributes
                                 const { sourceListId, allowedLists: sourceAllowedLists } = getDragContextFromDOM();
                                 
-                                // Determine drop position based on cursor location (top or bottom half of item)
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const midpoint = rect.top + rect.height / 2;
-                                const calculatedDropPosition = e.clientY < midpoint ? 'before' : 'after';
+                                // Determine drop zone based on cursor location (2-zone or 3-zone based on allowDropOn)
+                                const calculatedDropZone = getDropZone(e.currentTarget, e.clientY);
                                 
                                 // Always allow same-list drops
                                 if (sourceListId === item.listName) {
                                     e.dataTransfer.dropEffect = "move";
                                     handleDragOver(item, e);
-                                    setDropIndicatorPosition(dropPosition === DropPosition.Before ? 'before' : calculatedDropPosition);
+                                    setDropIndicatorPosition(calculatedDropZone);
+                                    setCurrentDropType(calculatedDropZone);
                                 } else {
                                     // Cross-list drop - check if target is in allowed lists
                                     const isAllowed = isItemInAllowedLists(item.listName, sourceAllowedLists);
                                     if (isAllowed) {
                                         e.dataTransfer.dropEffect = "move";
                                         handleDragOver(item, e);
-                                        setDropIndicatorPosition(dropPosition === DropPosition.Before ? 'before' : calculatedDropPosition);
+                                        setDropIndicatorPosition(calculatedDropZone);
+                                        setCurrentDropType(calculatedDropZone);
                                     } else {
                                         e.dataTransfer.dropEffect = "none";
                                         // Clear highlight if this was previously the drag target
                                         if (draggedOverItem?.uuid === item.uuid) {
                                             setDraggedOverItem(null);
                                             setDropIndicatorPosition(null);
+                                            setCurrentDropType(null);
                                         }
                                     }
                                 }
@@ -724,6 +834,7 @@ export function DragAndDropList({
                                 if (draggedOverItem?.uuid === item.uuid) {
                                     setDraggedOverItem(null);
                                     setDropIndicatorPosition(null);
+                                    setCurrentDropType(null);
                                 }
                             }}
                             /**
@@ -743,6 +854,7 @@ export function DragAndDropList({
                                 setDraggedItems([]);
                                 setDraggedOverItem(null);
                                 setDropIndicatorPosition(null);
+                                setCurrentDropType(null);
                                 // Clear drag context attributes from the element
                                 clearDragContextFromDOM(e.currentTarget);
                             }}

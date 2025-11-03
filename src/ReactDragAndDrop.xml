@@ -47,13 +47,9 @@
                 <caption>Allowed Lists</caption>
                 <description>Comma-separated list IDs that can accept items from this list (e.g., 'list2,list3'). Leave empty to allow drag-and-drop only within this list.</description>
             </property>
-            <property key="dropPosition" type="enumeration" defaultValue="after">
-                <caption>Drop Position</caption>
-                <description>Position to drop items relative to the target item</description>
-                <enumerationValues>
-                    <enumerationValue key="before">Before</enumerationValue>
-                    <enumerationValue key="after">After</enumerationValue>
-                </enumerationValues>
+            <property key="allowDropOn" type="boolean" defaultValue="false">
+                <caption>Allow Drop On Item</caption>
+                <description>Allow items to be dropped ON target items (not just before/after). When enabled, the item will be marked with dropType='on' in the changes JSON</description>
             </property>
             <property key="enableMultiSelect" type="boolean" defaultValue="false">
                 <caption>Enable Multi-Select</caption>
@@ -67,9 +63,17 @@
                 <caption>Hover Highlight Color</caption>
                 <description>Color to highlight item on hover and multi-select (hex format, e.g., #f5f5f5)</description>
             </property>
-            <property key="dropHighlightColor" type="textTemplate" required="false">
-                <caption>Drop Highlight Color</caption>
-                <description>Color to highlight the drop target item (hex format, e.g., #e3f2fd)</description>
+            <property key="dropBeforeColor" type="textTemplate" required="false">
+                <caption>Drop Before Color</caption>
+                <description>Color to highlight when dropping BEFORE an item (hex format, e.g., #e3f2fd)</description>
+            </property>
+            <property key="dropOnColor" type="textTemplate" required="false">
+                <caption>Drop On Color</caption>
+                <description>Color to highlight when dropping ON an item (hex format, e.g., #c8e6c9)</description>
+            </property>
+            <property key="dropAfterColor" type="textTemplate" required="false">
+                <caption>Drop After Color</caption>
+                <description>Color to highlight when dropping AFTER an item (hex format, e.g., #fff9c4)</description>
             </property>
             <property key="onDrop" type="action" required="false">
                 <caption>On Drop Action</caption>

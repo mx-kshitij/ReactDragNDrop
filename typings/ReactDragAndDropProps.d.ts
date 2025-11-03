@@ -7,8 +7,6 @@ import { ComponentType, CSSProperties, ReactNode } from "react";
 import { DynamicValue, EditableValue, ListValue, ListAttributeValue, ListWidgetValue } from "mendix";
 import { Big } from "big.js";
 
-export type DropPositionEnum = "before" | "after";
-
 export interface ReactDragAndDropContainerProps {
     name: string;
     class: string;
@@ -21,11 +19,13 @@ export interface ReactDragAndDropContainerProps {
     jsonTemplate: string;
     listId: DynamicValue<string>;
     allowedLists?: DynamicValue<string>;
-    dropPosition: DropPositionEnum;
+    allowDropOn: boolean;
     enableMultiSelect: boolean;
     showDragHandle: boolean;
     hoverHighlightColor?: DynamicValue<string>;
-    dropHighlightColor?: DynamicValue<string>;
+    dropBeforeColor?: DynamicValue<string>;
+    dropOnColor?: DynamicValue<string>;
+    dropAfterColor?: DynamicValue<string>;
     content?: ListWidgetValue;
 }
 
@@ -46,11 +46,13 @@ export interface ReactDragAndDropPreviewProps {
     jsonTemplate: string;
     listId: string;
     allowedLists: string;
-    dropPosition: DropPositionEnum;
+    allowDropOn: boolean;
     enableMultiSelect: boolean;
     showDragHandle: boolean;
     hoverHighlightColor: string;
-    dropHighlightColor: string;
+    dropBeforeColor: string;
+    dropOnColor: string;
+    dropAfterColor: string;
     onDrop: {} | null;
     content: { widgetCount: number; renderer: ComponentType<{ children: ReactNode; caption?: string }> };
 }

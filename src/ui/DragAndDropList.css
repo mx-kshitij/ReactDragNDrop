@@ -106,15 +106,21 @@
 }
 
 /**
- * Drop position indicators - visual cues for "before" or "after" drops
+ * Drop position indicators - visual cues for "before", "on", or "after" drops
  * 
  * "before": Shows a border on the top edge of the item
+ * "on": Shows a full border to highlight the entire item as drop target
  * "after": Shows a border on the bottom edge of the item
  * 
  * This provides clear visual feedback about where the item will be inserted
+ * Note: Background color is controlled by inline styles to respect user-configured colors
  */
 .drag-and-drop-item.drop-before {
     border-top: 3px solid #2196f3;
+}
+
+.drag-and-drop-item.drop-on {
+    border: 2px solid #2196f3;
 }
 
 .drag-and-drop-item.drop-after {
