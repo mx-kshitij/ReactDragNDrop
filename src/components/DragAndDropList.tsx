@@ -123,15 +123,7 @@ export function DragAndDropList({
         // This is important for nested lists - we set it on the closest list container
         const listContainer = event.currentTarget.closest('.drag-and-drop-list') as HTMLElement;
         if (listContainer) {
-            console.info('[DragStart] Setting drag context', {
-                listId,
-                allowedLists,
-                containerFound: true,
-                containerClass: listContainer.className,
-            });
             setDragContextOnDOM(listContainer, listId, allowedLists || "");
-        } else {
-            console.info('[DragStart] ERROR: No list container found!');
         }
         
         // If multi-select is enabled and item is selected, drag all selected items
@@ -812,20 +804,11 @@ export function DragAndDropList({
                                 // Get source list context from DOM attributes set during drag start
                                 const { sourceListId, allowedLists: sourceAllowedLists } = getDragContextFromDOM();
                                 
-                                console.info('[DragOver]', {
-                                    itemListName: item.listName,
-                                    sourceListId,
-                                    sourceAllowedLists,
-                                    itemUuid: item.uuid,
-                                    isSameList: sourceListId === item.listName,
-                                });
-                                
                                 // Determine drop zone based on cursor location (2-zone or 3-zone based on allowDropOn)
                                 const calculatedDropZone = getDropZone(e.currentTarget, e.clientY);
                                 
                                 // Always allow same-list drops
                                 if (sourceListId === item.listName) {
-                                    console.info('[DragOver] Same-list drop allowed');
                                     e.dataTransfer.dropEffect = "move";
                                     handleDragOver(item, e);
                                     setDropIndicatorPosition(calculatedDropZone);
@@ -833,10 +816,6 @@ export function DragAndDropList({
                                 } else {
                                     // Cross-list drop - check if target is in allowed lists
                                     const isAllowed = isItemInAllowedLists(item.listName, sourceAllowedLists);
-                                    console.info('[DragOver] Cross-list validation', {
-                                        targetListName: item.listName,
-                                        isAllowed,
-                                    });
                                     if (isAllowed) {
                                         e.dataTransfer.dropEffect = "move";
                                         handleDragOver(item, e);

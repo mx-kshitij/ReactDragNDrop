@@ -23,13 +23,6 @@ export function getDragContextFromDOM(): { sourceListId: string; allowedLists: s
         const draggedElement = draggedElements[draggedElements.length - 1];
         sourceListId = draggedElement.getAttribute("data-drag-source-list") || "";
         allowedLists = draggedElement.getAttribute("data-drag-allowed-lists") || "";
-        console.info('[getDragContextFromDOM] Found drag context (deepest of', draggedElements.length, ')', {
-            element: draggedElement.className,
-            sourceListId,
-            allowedLists,
-        });
-    } else {
-        console.info('[getDragContextFromDOM] No drag context found in DOM');
     }
 
     return { sourceListId, allowedLists };
@@ -53,18 +46,11 @@ export function setDragContextOnDOM(element: HTMLElement, sourceListId: string, 
         const htmlEl = el as HTMLElement;
         // Only clear if it's a parent of the current element (not the element itself)
         if (htmlEl !== element && htmlEl.contains(element)) {
-            console.info('[setDragContextOnDOM] Clearing parent context from', htmlEl.className);
             htmlEl.removeAttribute("data-drag-source-list");
             htmlEl.removeAttribute("data-drag-allowed-lists");
         }
     });
     
-    console.info('[setDragContextOnDOM] Setting attributes', {
-        elementClass: element.className,
-        sourceListId,
-        allowedLists,
-        elementTagName: element.tagName,
-    });
     element.setAttribute("data-drag-source-list", sourceListId);
     element.setAttribute("data-drag-allowed-lists", allowedLists || "");
 }
