@@ -115,8 +115,24 @@ export function DragAndDropList({
      * - Includes ALL source list items so target can calculate re-indexing for remaining items
      */
     const handleDragStart = (item: DragItem, event: React.DragEvent<HTMLLIElement>) => {
-        // Store drag context in DOM attributes for cross-instance access
-        setDragContextOnDOM(event.currentTarget, listId, allowedLists || "");
+        // Stop propagation to prevent parent list's handleDragStart from being called
+        // This is critical for nested lists - only the innermost list should handle the drag
+        event.stopPropagation();
+        
+        // Store drag context in DOM attributes on the list container for cross-instance access
+        // This is important for nested lists - we set it on the closest list container
+        const listContainer = event.currentTarget.closest('.drag-and-drop-list') as HTMLElement;
+        if (listContainer) {
+            console.info('[DragStart] Setting drag context', {
+                listId,
+                allowedLists,
+                containerFound: true,
+                containerClass: listContainer.className,
+            });
+            setDragContextOnDOM(listContainer, listId, allowedLists || "");
+        } else {
+            console.info('[DragStart] ERROR: No list container found!');
+        }
         
         // If multi-select is enabled and item is selected, drag all selected items
         if (enableMultiSelect && selectedItems.has(item.uuid)) {
@@ -793,14 +809,23 @@ export function DragAndDropList({
                                 e.preventDefault();
                                 e.stopPropagation();
                                 
-                                // Get allowed lists from the dragged element's attributes
+                                // Get source list context from DOM attributes set during drag start
                                 const { sourceListId, allowedLists: sourceAllowedLists } = getDragContextFromDOM();
+                                
+                                console.info('[DragOver]', {
+                                    itemListName: item.listName,
+                                    sourceListId,
+                                    sourceAllowedLists,
+                                    itemUuid: item.uuid,
+                                    isSameList: sourceListId === item.listName,
+                                });
                                 
                                 // Determine drop zone based on cursor location (2-zone or 3-zone based on allowDropOn)
                                 const calculatedDropZone = getDropZone(e.currentTarget, e.clientY);
                                 
                                 // Always allow same-list drops
                                 if (sourceListId === item.listName) {
+                                    console.info('[DragOver] Same-list drop allowed');
                                     e.dataTransfer.dropEffect = "move";
                                     handleDragOver(item, e);
                                     setDropIndicatorPosition(calculatedDropZone);
@@ -808,6 +833,10 @@ export function DragAndDropList({
                                 } else {
                                     // Cross-list drop - check if target is in allowed lists
                                     const isAllowed = isItemInAllowedLists(item.listName, sourceAllowedLists);
+                                    console.info('[DragOver] Cross-list validation', {
+                                        targetListName: item.listName,
+                                        isAllowed,
+                                    });
                                     if (isAllowed) {
                                         e.dataTransfer.dropEffect = "move";
                                         handleDragOver(item, e);
@@ -850,13 +879,16 @@ export function DragAndDropList({
                              * onDragEnd: Cleanup drag state after drop completes
                              * Separate from onDrop to avoid duplicate processing
                              */
-                            onDragEnd={(e) => {
+                            onDragEnd={() => {
                                 setDraggedItems([]);
                                 setDraggedOverItem(null);
                                 setDropIndicatorPosition(null);
                                 setCurrentDropType(null);
-                                // Clear drag context attributes from the element
-                                clearDragContextFromDOM(e.currentTarget);
+                                // Clear drag context attributes from the list container
+                                const listContainer = document.querySelector('.drag-and-drop-list[data-drag-source-list]') as HTMLElement;
+                                if (listContainer) {
+                                    clearDragContextFromDOM(listContainer);
+                                }
                             }}
                         >
                             {/* Drag handle icon (optional, controlled by showDragHandle prop) */}
