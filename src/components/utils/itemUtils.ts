@@ -23,7 +23,7 @@ import { DragItem } from "../types";
 export function initializeItems(
     dataSource: ListValue | undefined,
     uuidAttribute: ListAttributeValue<string>,
-    sortingAttribute: ListAttributeValue<any>,
+    sortingAttribute: ListAttributeValue<any> | undefined,
     listId: string
 ): DragItem[] {
     if (!dataSource || !dataSource.items) {
@@ -38,8 +38,12 @@ export function initializeItems(
         // Read sortingAttribute to get the actual sort position
         // This is critical: we use the sorting attribute value, not array index
         // This ensures correct order is maintained after database updates
-        const sortValue = sortingAttribute.get(item);
-        const sortIndex = sortValue?.value ? Number(sortValue.value) : index;
+        // If sortingAttribute is not provided, use the array index as fallback
+        let sortIndex = index;
+        if (sortingAttribute) {
+            const sortValue = sortingAttribute.get(item);
+            sortIndex = sortValue?.value ? Number(sortValue.value) : index;
+        }
 
         return {
             uuid: String(uuid),
@@ -50,7 +54,7 @@ export function initializeItems(
         };
     });
 
-    // Sort items by their sorting attribute value to display in correct order
+    // Sort items by their sorting attribute value (or array index if sortingAttribute not provided)
     newItems.sort((a, b) => a.originalIndex - b.originalIndex);
 
     return newItems;

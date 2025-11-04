@@ -14,7 +14,7 @@ export interface ReactDragAndDropContainerProps {
     tabIndex?: number;
     dataSource: ListValue;
     uuidAttribute: ListAttributeValue<string>;
-    sortingAttribute: ListAttributeValue<Big>;
+    sortingAttribute?: ListAttributeValue<Big>;
     content?: ListWidgetValue;
     changeJsonAttribute: EditableValue<string>;
     jsonTemplate: string;

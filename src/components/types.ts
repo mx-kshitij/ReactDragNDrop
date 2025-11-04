@@ -18,8 +18,8 @@ export interface DragAndDropListProps {
     dataSource: ListValue;
     /** Attribute containing unique identifier for each item */
     uuidAttribute: ListAttributeValue<string>;
-    /** Integer attribute that stores the sort order (read-only in widget) */
-    sortingAttribute: ListAttributeValue<any>;
+    /** Optional: Integer attribute that stores the sort order (read-only in widget). If provided, same-list reordering will trigger onDrop. Leave empty if only cross-list moves should trigger onDrop. */
+    sortingAttribute?: ListAttributeValue<any>;
     /** Context attribute to store changes as JSON string */
     changeJsonAttribute: EditableValue<string>;
     /** Unique identifier for this list instance (required for cross-list dragging) */

@@ -617,12 +617,19 @@ export function DragAndDropList({
                 /**
                  * Set the JSON changes to context attribute
                  * 
+                 * For same-list drops:
+                 * - Always trigger onDrop if dropType === 'on' (dropping ON another item)
+                 * - Only trigger onDrop if sortingAttribute is provided (for before/after drops)
+                 * 
+                 * For cross-list drops: Always trigger (handled separately above)
+                 * 
                  * Mendix automatically triggers the onChange="onDrop" action
                  * when changeJsonAttribute is updated
                  * 
                  * JSON format: [{ uuid: string, newIndex?: number, sourceListId: string, targetListId: string, dropType?: string }, ...]
                  */
-                if (changes.length > 0) {
+                const shouldTriggerAction = changes.length > 0 && (currentDropType === 'on' || sortingAttribute);
+                if (shouldTriggerAction) {
                     changeJsonAttribute.setValue(JSON.stringify(changes));
                 }
 

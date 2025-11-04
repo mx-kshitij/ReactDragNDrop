@@ -4,7 +4,7 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
     <name>React Drag And Drop</name>
     <description>A drag and drop widget for reordering items with support for tracking changes</description>
-    <icon>icon.svg</icon>
+    <icon>PHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDwhLS0gTGVmdCBsaXN0IC0tPgogIDxyZWN0IHg9IjIiIHk9IjMiIHdpZHRoPSI3IiBoZWlnaHQ9IjE4IiByeD0iMSIgc3Ryb2tlPSIjNEE1NTY4IiBzdHJva2Utd2lkdGg9IjEuNSIgZmlsbD0ibm9uZSIvPgogIDxsaW5lIHgxPSIzLjUiIHkxPSI2IiB4Mj0iNy41IiB5Mj0iNiIgc3Ryb2tlPSIjNEE1NTY4IiBzdHJva2Utd2lkdGg9IjEuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgPGxpbmUgeDE9IjMuNSIgeTE9IjkiIHgyPSI3LjUiIHkyPSI5IiBzdHJva2U9IiM0QTU1NjgiIHN0cm9rZS13aWR0aD0iMS4yIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8bGluZSB4MT0iMy41IiB5MT0iMTIiIHgyPSI3LjUiIHkyPSIxMiIgc3Ryb2tlPSIjNEE1NTY4IiBzdHJva2Utd2lkdGg9IjEuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CgogIDwhLS0gUmlnaHQgbGlzdCAtLT4KICA8cmVjdCB4PSIxNSIgeT0iMyIgd2lkdGg9IjciIGhlaWdodD0iMTgiIHJ4PSIxIiBzdHJva2U9IiM0QTU1NjgiIHN0cm9rZS13aWR0aD0iMS41IiBmaWxsPSJub25lIi8+CiAgPGxpbmUgeDE9IjE2LjUiIHkxPSI2IiB4Mj0iMjAuNSIgeTI9IjYiIHN0cm9rZT0iIzRBNTU2OCIgc3Ryb2tlLXdpZHRoPSIxLjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxsaW5lIHgxPSIxNi41IiB5MT0iOSIgeDI9IjIwLjUiIHkyPSI5IiBzdHJva2U9IiM0QTU1NjgiIHN0cm9rZS13aWR0aD0iMS4yIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KCiAgPCEtLSBNb3ZpbmcgaXRlbSAtLT4KICA8cmVjdCB4PSI5LjUiIHk9IjEzLjUiIHdpZHRoPSI1IiBoZWlnaHQ9IjIiIHJ4PSIwLjUiIGZpbGw9IiMzQjgyRjYiIHN0cm9rZT0iIzI1NjNFQiIgc3Ryb2tlLXdpZHRoPSIxIi8+CgogIDwhLS0gRHJhZyBkb3RzIC0tPgogIDxjaXJjbGUgY3g9IjExIiBjeT0iMTQuNSIgcj0iMC4zNSIgZmlsbD0id2hpdGUiLz4KICA8Y2lyY2xlIGN4PSIxMiIgY3k9IjE0LjUiIHI9IjAuMzUiIGZpbGw9IndoaXRlIi8+CiAgPGNpcmNsZSBjeD0iMTMiIGN5PSIxNC41IiByPSIwLjM1IiBmaWxsPSJ3aGl0ZSIvPgoKICA8IS0tIEN1cnZlZCBsaW5lIC0tPgogIDxwYXRoCiAgICBkPSJNNyAxOCBDMTAgMjAgMTUgMjAgMTcgMTgiCiAgICBzdHJva2U9IiMzQjgyRjYiCiAgICBzdHJva2Utd2lkdGg9IjEuNCIKICAgIGZpbGw9Im5vbmUiCiAgICBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KCiAgPCEtLSBBcnJvd2hlYWQgLS0+CiAgPHBhdGgKICAgIGQ9Ik0xNiAxNy4yIEwxNy44IDE4IEwxNy41IDE5LjUiCiAgICBzdHJva2U9IiMzQjgyRjYiCiAgICBzdHJva2Utd2lkdGg9IjEuNSIKICAgIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIKICAgIHN0cm9rZS1saW5lam9pbj0icm91bmQiCiAgICBmaWxsPSJub25lIi8+Cjwvc3ZnPg==</icon>
     <properties>
         <propertyGroup caption="Data">
             <property key="dataSource" type="datasource" isList="true" required="true">
@@ -18,9 +18,9 @@
                     <attributeType name="String"/>
                 </attributeTypes>
             </property>
-            <property key="sortingAttribute" type="attribute" dataSource="dataSource" required="true">
+            <property key="sortingAttribute" type="attribute" dataSource="dataSource" required="false">
                 <caption>Sorting Attribute</caption>
-                <description>Integer attribute to read the sort order (read-only in widget, updated by onDrop action)</description>
+                <description>Optional integer attribute to read the sort order (read-only in widget, updated by onDrop action). If provided, same-list reordering will trigger the onDrop action. Leave empty if only cross-list moves should trigger onDrop.</description>
                 <attributeTypes>
                     <attributeType name="Integer"/>
                 </attributeTypes>
