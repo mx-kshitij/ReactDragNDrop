@@ -15,6 +15,7 @@ export interface ReactDragAndDropContainerProps {
     dataSource: ListValue;
     uuidAttribute: ListAttributeValue<string>;
     sortingAttribute: ListAttributeValue<Big>;
+    content?: ListWidgetValue;
     changeJsonAttribute: EditableValue<string>;
     jsonTemplate: string;
     listId: DynamicValue<string>;
@@ -26,7 +27,6 @@ export interface ReactDragAndDropContainerProps {
     dropBeforeColor?: DynamicValue<string>;
     dropOnColor?: DynamicValue<string>;
     dropAfterColor?: DynamicValue<string>;
-    content?: ListWidgetValue;
 }
 
 export interface ReactDragAndDropPreviewProps {
@@ -42,8 +42,10 @@ export interface ReactDragAndDropPreviewProps {
     dataSource: {} | { caption: string } | { type: string } | null;
     uuidAttribute: string;
     sortingAttribute: string;
+    content: { widgetCount: number; renderer: ComponentType<{ children: ReactNode; caption?: string }> };
     changeJsonAttribute: string;
     jsonTemplate: string;
+    onDrop: {} | null;
     listId: string;
     allowedLists: string;
     allowDropOn: boolean;
@@ -53,6 +55,4 @@ export interface ReactDragAndDropPreviewProps {
     dropBeforeColor: string;
     dropOnColor: string;
     dropAfterColor: string;
-    onDrop: {} | null;
-    content: { widgetCount: number; renderer: ComponentType<{ children: ReactNode; caption?: string }> };
 }

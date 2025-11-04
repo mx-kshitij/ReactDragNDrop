@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<widget id="mendix.reactdraganddrop.ReactDragAndDrop" pluginWidget="true" needsEntityContext="true" offlineCapable="true"
-        supportedPlatform="Web"
-        xmlns="http://www.mendix.com/widget/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
+<widget id="mendix.reactdraganddrop.ReactDragAndDrop" pluginWidget="true" needsEntityContext="true" offlineCapable="true" supportedPlatform="Web"
+    xmlns="http://www.mendix.com/widget/1.0/"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
     <name>React Drag And Drop</name>
     <description>A drag and drop widget for reordering items with support for tracking changes</description>
-    <icon/>
+    <icon>icon.svg</icon>
     <properties>
         <propertyGroup caption="Data">
             <property key="dataSource" type="datasource" isList="true" required="true">
@@ -26,6 +25,12 @@
                     <attributeType name="Integer"/>
                 </attributeTypes>
             </property>
+            <property key="content" type="widgets" dataSource="dataSource" required="false">
+                <caption>Content</caption>
+                <description>Content to display for each item</description>
+            </property>
+        </propertyGroup>
+        <propertyGroup caption="Change Tracking">
             <property key="changeJsonAttribute" type="attribute" onChange="onDrop" required="true">
                 <caption>Change JSON Attribute</caption>
                 <description>Context attribute to store changes as JSON</description>
@@ -33,12 +38,16 @@
                     <attributeType name="String"/>
                 </attributeTypes>
             </property>
-            <property key="jsonTemplate" type="string" required="false" multiline="true" defaultValue="[&#10;  {&#10;    &quot;uuid&quot;: &quot;item-1&quot;,&#10;    &quot;newIndex&quot;: 0,&#10;    &quot;sourceListId&quot;: &quot;list1&quot;,&#10;    &quot;targetListId&quot;: &quot;list1&quot;&#10;  },&#10;  {&#10;    &quot;uuid&quot;: &quot;item-2&quot;,&#10;    &quot;newIndex&quot;: 1,&#10;    &quot;sourceListId&quot;: &quot;list1&quot;,&#10;    &quot;targetListId&quot;: &quot;list1&quot;&#10;  }&#10;]">
+            <property key="jsonTemplate" type="string" required="false" multiline="true" defaultValue="[&#10;  {&#10;    &quot;uuid&quot;: &quot;item-1&quot;,&#10;    &quot;newIndex&quot;: 0,&#10;    &quot;sourceListId&quot;: &quot;list1&quot;,&#10;    &quot;targetListId&quot;: &quot;list1&quot;,&#10;    &quot;dropType&quot;: &quot;after&quot;&#10;  },&#10;  {&#10;    &quot;uuid&quot;: &quot;item-2&quot;,&#10;    &quot;newIndex&quot;: null,&#10;    &quot;sourceListId&quot;: &quot;list1&quot;,&#10;    &quot;targetListId&quot;: &quot;list2&quot;,&#10;    &quot;dropType&quot;: &quot;on&quot;,&#10;    &quot;targetItemUuid&quot;: &quot;item-5&quot;&#10;  }&#10;]">
                 <caption>JSON Template Reference (Read-Only)</caption>
-                <description>Reference template showing the structure of changes JSON. Array of changes with uuid, newIndex, sourceListId, and targetListId. For cross-list moves, sourceListId != targetListId. Backend should re-index source list items not appearing in the changes array.</description>
+                <description>Reference template showing the structure of changes JSON. Each change includes: uuid (moved item), newIndex (position in target list, null for "on" drops), sourceListId and targetListId (for cross-list detection), dropType ("before", "after", or "on"), and targetItemUuid (only for "on" drops). Backend should re-index source list items not appearing in the changes array.</description>
+            </property>
+            <property key="onDrop" type="action" required="false">
+                <caption>On Drop Action</caption>
+                <description>Action to perform when items are dropped and reordered</description>
             </property>
         </propertyGroup>
-        <propertyGroup caption="Behavior">
+        <propertyGroup caption="List">
             <property key="listId" type="textTemplate" required="true">
                 <caption>List Identifier</caption>
                 <description>Unique identifier for this list (e.g., 'list1', 'list2'). Required for cross-list dragging between multiple widgets.</description>
@@ -47,6 +56,8 @@
                 <caption>Allowed Lists</caption>
                 <description>Comma-separated list IDs that can accept items from this list (e.g., 'list2,list3'). Leave empty to allow drag-and-drop only within this list.</description>
             </property>
+        </propertyGroup>
+        <propertyGroup caption="Configuration">
             <property key="allowDropOn" type="boolean" defaultValue="false">
                 <caption>Allow Drop On Item</caption>
                 <description>Allow items to be dropped ON target items (not just before/after). When enabled, the item will be marked with dropType='on' in the changes JSON</description>
@@ -74,16 +85,6 @@
             <property key="dropAfterColor" type="textTemplate" required="false">
                 <caption>Drop After Color</caption>
                 <description>Color to highlight when dropping AFTER an item (hex format, e.g., #fff9c4)</description>
-            </property>
-            <property key="onDrop" type="action" required="false">
-                <caption>On Drop Action</caption>
-                <description>Action to perform when items are dropped and reordered</description>
-            </property>
-        </propertyGroup>
-        <propertyGroup caption="Content">
-            <property key="content" type="widgets" dataSource="dataSource" required="false">
-                <caption>Content</caption>
-                <description>Widgets to display for each item</description>
             </property>
         </propertyGroup>
     </properties>
