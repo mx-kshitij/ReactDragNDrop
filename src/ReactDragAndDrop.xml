@@ -70,6 +70,16 @@
                 <caption>Allow Drop On Item</caption>
                 <description>Allow items to be dropped ON target items (not just before/after). When enabled, the item will be marked with dropType='on' in the changes JSON</description>
             </property>
+            <property key="dropOption" type="enumeration" defaultValue="auto">
+                <caption>Drop Option</caption>
+                <description>Controls the drop behavior. 'Auto' allows dynamic positioning based on cursor position. 'Before', 'On', and 'After' force drops to always use that specific position.</description>
+                <enumerationValues>
+                    <enumerationValue key="auto">Auto</enumerationValue>
+                    <enumerationValue key="before">Before</enumerationValue>
+                    <enumerationValue key="on">On</enumerationValue>
+                    <enumerationValue key="after">After</enumerationValue>
+                </enumerationValues>
+            </property>
             <property key="enableMultiSelect" type="boolean" defaultValue="false">
                 <caption>Enable Multi-Select</caption>
                 <description>Allow selecting multiple items by clicking. Selected items can be dragged together.</description>

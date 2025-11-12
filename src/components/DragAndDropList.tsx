@@ -35,6 +35,7 @@ export function DragAndDropList({
     listId,
     allowedLists,
     allowDropOn,
+    dropOption,
     enableMultiSelect,
     showDragHandle,
     hoverHighlightColor,
@@ -79,11 +80,11 @@ export function DragAndDropList({
     /**
      * Filter changes based on changeJsonMode
      * - fullChange: Include all items (dragged + re-indexed)
-     * - targetOnly: Include only items that were actually dragged (have position or targetItemUuid)
+     * - targetOnly: Include only items that were actually dragged (have dropType or targetItemUuid)
      */
     const filterChanges = (changes: ChangeRecord[]): ChangeRecord[] => {
         if (changeJsonMode === "targetOnly") {
-            return changes.filter(c => c.position || c.targetItemUuid);
+            return changes.filter(c => c.dropType || c.targetItemUuid);
         }
         return changes;
     };
@@ -252,16 +253,21 @@ export function DragAndDropList({
     /**
      * Determine the drop zone based on cursor position within item
      * 
-     * When allowDropOn is enabled, divides item into 3 zones:
-     * - Top 1/3: 'before'
-     * - Middle 1/3: 'on'
-     * - Bottom 1/3: 'after'
-     * 
-     * When allowDropOn is disabled, uses 2 zones (50/50 split):
-     * - Top half: 'before'
-     * - Bottom half: 'after'
+     * Behavior depends on dropOption configuration:
+     * - 'auto': Dynamic positioning based on cursor and allowDropOn setting
+     *   - When allowDropOn is true: divides item into 3 zones (before/on/after)
+     *   - When allowDropOn is false: divides item into 2 zones (before/after)
+     * - 'before': Always returns 'before'
+     * - 'on': Always returns 'on'
+     * - 'after': Always returns 'after'
      */
     const getDropZone = (element: HTMLElement, clientY: number): 'before' | 'after' | 'on' => {
+        // If dropOption is not 'auto', return the forced position
+        if (dropOption !== 'auto') {
+            return dropOption;
+        }
+        
+        // Auto mode: calculate based on cursor position
         const rect = element.getBoundingClientRect();
         const height = rect.height;
         const offsetY = clientY - rect.top;
@@ -383,7 +389,7 @@ export function DragAndDropList({
                         newIndex: idx, // Will be 0 for first item, 1 for second, etc.
                         sourceListId: sourceListId,
                         targetListId: listId,
-                        position: "after", // Default position for empty list drops
+                        dropType: "after", // Default drop type for empty list drops
                         // No targetItemUuid for empty list
                     });
                 });
@@ -436,7 +442,7 @@ export function DragAndDropList({
                                 newIndex: null, // No index for "on" drops
                                 sourceListId: sourceListId,
                                 targetListId: listId,
-                                position: "on",
+                                dropType: "on",
                                 targetItemUuid: draggedOverItem?.uuid, // UUID of the item dropped ON
                             });
                         });
@@ -512,7 +518,7 @@ export function DragAndDropList({
                                     newIndex: newIndex,
                                     sourceListId: sourceListId,
                                     targetListId: listId,
-                                    position: (currentDropType || 'after') as "before" | "after" | "on",
+                                    dropType: (currentDropType || 'after') as "before" | "after" | "on",
                                     targetItemUuid: draggedOverItem?.uuid,
                                 };
                                 allChanges.push(changeRecord);
@@ -626,7 +632,7 @@ export function DragAndDropList({
                             newIndex: null, // No index change for "on" drops
                             sourceListId: listId,
                             targetListId: listId,
-                            position: "on",
+                            dropType: "on",
                             targetItemUuid: draggedOverItemSafe.uuid, // UUID of the item dropped ON
                         });
                     });
@@ -642,9 +648,9 @@ export function DragAndDropList({
                                 sourceListId: listId,
                                 targetListId: listId,
                             };
-                            // Only include position and targetItemUuid for items that were actually dragged
+                            // Only include dropType and targetItemUuid for items that were actually dragged
                             if (draggedUuids.has(item.uuid)) {
-                                changeRecord.position = (currentDropType || 'after') as "before" | "after" | "on";
+                                changeRecord.dropType = (currentDropType || 'after') as "before" | "after" | "on";
                                 changeRecord.targetItemUuid = draggedOverItemSafe.uuid;
                             }
                             changes.push(changeRecord);

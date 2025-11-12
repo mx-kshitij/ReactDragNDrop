@@ -9,6 +9,8 @@ import { Big } from "big.js";
 
 export type ChangeJsonModeEnum = "fullChange" | "targetOnly";
 
+export type DropOptionEnum = "auto" | "before" | "on" | "after";
+
 export interface ReactDragAndDropContainerProps {
     name: string;
     class: string;
@@ -24,6 +26,7 @@ export interface ReactDragAndDropContainerProps {
     listId: DynamicValue<string>;
     allowedLists?: DynamicValue<string>;
     allowDropOn: boolean;
+    dropOption: DropOptionEnum;
     enableMultiSelect: boolean;
     showDragHandle: boolean;
     hoverHighlightColor?: DynamicValue<string>;
@@ -53,6 +56,7 @@ export interface ReactDragAndDropPreviewProps {
     listId: string;
     allowedLists: string;
     allowDropOn: boolean;
+    dropOption: DropOptionEnum;
     enableMultiSelect: boolean;
     showDragHandle: boolean;
     hoverHighlightColor: string;

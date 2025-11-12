@@ -35,6 +35,7 @@ export function ReactDragAndDrop({
     listId,
     allowedLists,
     allowDropOn,
+    dropOption,
     enableMultiSelect,
     showDragHandle,
     hoverHighlightColor,
@@ -53,6 +54,7 @@ export function ReactDragAndDrop({
             listId={listId?.value ?? "default-list"}
             allowedLists={allowedLists?.value}
             allowDropOn={allowDropOn}
+            dropOption={dropOption}
             enableMultiSelect={enableMultiSelect}
             showDragHandle={showDragHandle}
             hoverHighlightColor={hoverHighlightColor}

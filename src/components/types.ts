@@ -30,6 +30,8 @@ export interface DragAndDropListProps {
     allowedLists?: string;
     /** Allow items to be dropped ON target items (in addition to before/after) */
     allowDropOn: boolean;
+    /** Drop behavior: 'auto' for dynamic positioning, or force 'before', 'on', or 'after' */
+    dropOption: "auto" | "before" | "on" | "after";
     /** Enable/disable multi-select functionality with Shift+click */
     enableMultiSelect: boolean;
     /** Show/hide the drag handle icon (visual only, doesn't affect drag functionality) */
@@ -92,8 +94,8 @@ export interface ChangeRecord {
     sourceListId: string;
     /** ID of the list where item is being dropped */
     targetListId: string;
-    /** Position relative to target: "before", "after", or "on". Only present for items that were actually dragged. */
-    position?: "before" | "after" | "on";
+    /** Drop type relative to target: "before", "after", or "on". Only present for items that were actually dragged. */
+    dropType?: "before" | "after" | "on";
     /** UUID of the target item (the item this was dropped near/on). Only present for items that were actually dragged. */
     targetItemUuid?: string;
 }
