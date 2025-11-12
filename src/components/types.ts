@@ -22,6 +22,8 @@ export interface DragAndDropListProps {
     sortingAttribute?: ListAttributeValue<any>;
     /** Context attribute to store changes as JSON string */
     changeJsonAttribute: EditableValue<string>;
+    /** Mode for change JSON: 'fullChange' includes all affected items, 'targetOnly' includes only dragged items */
+    changeJsonMode: "fullChange" | "targetOnly";
     /** Unique identifier for this list instance (required for cross-list dragging) */
     listId: string;
     /** Comma-separated list IDs that can accept items from this list. Leave empty to restrict drops to same list only. */
@@ -90,8 +92,8 @@ export interface ChangeRecord {
     sourceListId: string;
     /** ID of the list where item is being dropped */
     targetListId: string;
-    /** Type of drop: before, after, or on (optional, defaults to after) */
-    dropType?: DropType | string;
-    /** UUID of the target item (only for "on" drops, indicates which item was dropped onto) */
+    /** Position relative to target: "before", "after", or "on". Only present for items that were actually dragged. */
+    position?: "before" | "after" | "on";
+    /** UUID of the target item (the item this was dropped near/on). Only present for items that were actually dragged. */
     targetItemUuid?: string;
 }

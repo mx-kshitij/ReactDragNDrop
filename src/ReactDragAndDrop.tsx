@@ -31,6 +31,7 @@ export function ReactDragAndDrop({
     uuidAttribute,
     sortingAttribute,
     changeJsonAttribute,
+    changeJsonMode,
     listId,
     allowedLists,
     allowDropOn,
@@ -48,6 +49,7 @@ export function ReactDragAndDrop({
             uuidAttribute={uuidAttribute}
             sortingAttribute={sortingAttribute}
             changeJsonAttribute={changeJsonAttribute}
+            changeJsonMode={changeJsonMode}
             listId={listId?.value ?? "default-list"}
             allowedLists={allowedLists?.value}
             allowDropOn={allowDropOn}

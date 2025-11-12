@@ -1,6 +1,6 @@
 import { ReactElement, createElement, useState, useEffect } from "react";
 import "../ui/DragAndDropList.css";
-import { DragItem, ChangeRecord, DragAndDropListProps, DropType } from "./types";
+import { DragItem, ChangeRecord, DragAndDropListProps } from "./types";
 import {
     isDropAllowed,
     isItemInAllowedLists,
@@ -31,6 +31,7 @@ export function DragAndDropList({
     uuidAttribute,
     sortingAttribute,
     changeJsonAttribute,
+    changeJsonMode,
     listId,
     allowedLists,
     allowDropOn,
@@ -76,6 +77,18 @@ export function DragAndDropList({
     }, [dataSource, uuidAttribute, sortingAttribute, listId]);
 
     /**
+     * Filter changes based on changeJsonMode
+     * - fullChange: Include all items (dragged + re-indexed)
+     * - targetOnly: Include only items that were actually dragged (have position or targetItemUuid)
+     */
+    const filterChanges = (changes: ChangeRecord[]): ChangeRecord[] => {
+        if (changeJsonMode === "targetOnly") {
+            return changes.filter(c => c.position || c.targetItemUuid);
+        }
+        return changes;
+    };
+
+    /**
      * Handle item click for multi-select functionality
      * 
      * Only active when enableMultiSelect is true
@@ -83,34 +96,24 @@ export function DragAndDropList({
      * Uses mousedown/mouseup to distinguish clicks from drags
      */
     const handleItemClick = (item: DragItem, event: React.MouseEvent) => {
-        console.info('[handleItemClick] Called for item:', item.uuid, 'enableMultiSelect:', enableMultiSelect);
-        
         if (!enableMultiSelect) {
-            console.info('[handleItemClick] Multi-select disabled, exiting');
             return;
         }
 
         // Don't prevent default - let drag work normally
         
-        console.info('[handleItemClick] Setting timer for item:', item.uuid);
-        
         // Set a flag to detect if drag starts
         // If drag starts within a short time, we won't toggle selection
         const clickTimer = setTimeout(() => {
-            console.info('[handleItemClick] Timer fired for item:', item.uuid, 'isDragging:', isDragging);
             if (!isDragging) {
                 // Toggle selection on click (no shift required)
                 const newSelected = new Set(selectedItems);
                 if (newSelected.has(item.uuid)) {
-                    console.info('[handleItemClick] Deselecting item:', item.uuid);
                     newSelected.delete(item.uuid);
                 } else {
-                    console.info('[handleItemClick] Selecting item:', item.uuid);
                     newSelected.add(item.uuid);
                 }
                 setSelectedItems(newSelected);
-            } else {
-                console.info('[handleItemClick] Drag in progress, not toggling selection');
             }
         }, 150); // Small delay to detect drag start
         
@@ -133,15 +136,12 @@ export function DragAndDropList({
      * - Includes ALL source list items so target can calculate re-indexing for remaining items
      */
     const handleDragStart = (item: DragItem, event: React.DragEvent<HTMLLIElement>) => {
-        console.info('[handleDragStart] Called for item:', item.uuid, 'isDragging before:', isDragging);
-        
         // Stop propagation to prevent parent list's handleDragStart from being called
         // This is critical for nested lists - only the innermost list should handle the drag
         event.stopPropagation();
         
         // Set dragging flag to prevent click handler from firing
         setIsDragging(true);
-        console.info('[handleDragStart] Set isDragging to true');
         
         // Store drag context in DOM attributes on the list container for cross-instance access
         // This is important for nested lists - we set it on the closest list container
@@ -383,6 +383,8 @@ export function DragAndDropList({
                         newIndex: idx, // Will be 0 for first item, 1 for second, etc.
                         sourceListId: sourceListId,
                         targetListId: listId,
+                        position: "after", // Default position for empty list drops
+                        // No targetItemUuid for empty list
                     });
                 });
 
@@ -396,7 +398,7 @@ export function DragAndDropList({
                         .filter((item: { uuid: string; originalIndex: number }) => !movedUuids.has(item.uuid))
                         .sort((a: { uuid: string; originalIndex: number }, b: { uuid: string; originalIndex: number }) => a.originalIndex - b.originalIndex);
                     
-                    // Re-index remaining items
+                    // Re-index remaining items (just new indices, no position/target)
                     remainingItems.forEach((item: { uuid: string; originalIndex: number }, newIndex: number) => {
                         allChanges.push({
                             uuid: item.uuid,
@@ -410,7 +412,8 @@ export function DragAndDropList({
                 }
 
                 if (allChanges.length > 0) {
-                    changeJsonAttribute.setValue(JSON.stringify(allChanges));
+                    const finalChanges = filterChanges(allChanges);
+                    changeJsonAttribute.setValue(JSON.stringify(finalChanges));
                 }
 
                 // Note: Items will appear in the list after datasource updates from the onDrop action
@@ -433,7 +436,7 @@ export function DragAndDropList({
                                 newIndex: null, // No index for "on" drops
                                 sourceListId: sourceListId,
                                 targetListId: listId,
-                                dropType: DropType.On,
+                                position: "on",
                                 targetItemUuid: draggedOverItem?.uuid, // UUID of the item dropped ON
                             });
                         });
@@ -449,7 +452,7 @@ export function DragAndDropList({
                                 .filter((item: { uuid: string; originalIndex: number }) => !movedUuids.has(item.uuid))
                                 .sort((a: { uuid: string; originalIndex: number }, b: { uuid: string; originalIndex: number }) => a.originalIndex - b.originalIndex);
                             
-                            // Re-index remaining items in source list
+                            // Re-index remaining items in source list (just new indices, no position/target)
                             remainingItems.forEach((item: { uuid: string; originalIndex: number }, newIndex: number) => {
                                 allChanges.push({
                                     uuid: item.uuid,
@@ -461,7 +464,8 @@ export function DragAndDropList({
                         }
 
                         if (allChanges.length > 0) {
-                            changeJsonAttribute.setValue(JSON.stringify(allChanges));
+                            const finalChanges = filterChanges(allChanges);
+                            changeJsonAttribute.setValue(JSON.stringify(finalChanges));
                         }
                     } else {
                         // For "before"/"after" drops: normal rearrangement
@@ -508,10 +512,12 @@ export function DragAndDropList({
                                     newIndex: newIndex,
                                     sourceListId: sourceListId,
                                     targetListId: listId,
+                                    position: (currentDropType || 'after') as "before" | "after" | "on",
+                                    targetItemUuid: draggedOverItem?.uuid,
                                 };
                                 allChanges.push(changeRecord);
                             } else {
-                                // Existing items in target list that may have shifted
+                                // Existing items in target list that may have shifted (just new indices, no position/target)
                                 const existingItem = newItems.find(i => i.uuid === item.uuid);
                                 if (existingItem && existingItem.originalIndex !== newIndex) {
                                     allChanges.push({
@@ -535,7 +541,7 @@ export function DragAndDropList({
                                 .filter((item: { uuid: string; originalIndex: number }) => !movedUuids.has(item.uuid))
                                 .sort((a: { uuid: string; originalIndex: number }, b: { uuid: string; originalIndex: number }) => a.originalIndex - b.originalIndex);
                             
-                            // Re-index remaining items
+                            // Re-index remaining items (just new indices, no position/target)
                             remainingItems.forEach((item: { uuid: string; originalIndex: number }, newIndex: number) => {
                                 allChanges.push({
                                     uuid: item.uuid,
@@ -547,7 +553,8 @@ export function DragAndDropList({
                         }
 
                         if (allChanges.length > 0) {
-                            changeJsonAttribute.setValue(JSON.stringify(allChanges));
+                            const finalChanges = filterChanges(allChanges);
+                            changeJsonAttribute.setValue(JSON.stringify(finalChanges));
                         }
                     }
                 }
@@ -619,21 +626,28 @@ export function DragAndDropList({
                             newIndex: null, // No index change for "on" drops
                             sourceListId: listId,
                             targetListId: listId,
-                            dropType: DropType.On,
+                            position: "on",
                             targetItemUuid: draggedOverItemSafe.uuid, // UUID of the item dropped ON
                         });
                     });
                 } else {
                     // For "before"/"after" drops: Track position changes
+                    const draggedUuids = new Set(draggedItems.map(i => i.uuid));
                     newItems.forEach((item, newIndex) => {
                         // Track changes if position changed from original
                         if (item.originalIndex !== newIndex) {
-                            changes.push({
+                            const changeRecord: ChangeRecord = {
                                 uuid: item.uuid,
                                 newIndex: newIndex,
                                 sourceListId: listId,
                                 targetListId: listId,
-                            });
+                            };
+                            // Only include position and targetItemUuid for items that were actually dragged
+                            if (draggedUuids.has(item.uuid)) {
+                                changeRecord.position = (currentDropType || 'after') as "before" | "after" | "on";
+                                changeRecord.targetItemUuid = draggedOverItemSafe.uuid;
+                            }
+                            changes.push(changeRecord);
                         }
                     });
                 }
@@ -654,7 +668,8 @@ export function DragAndDropList({
                  */
                 const shouldTriggerAction = changes.length > 0 && (currentDropType === 'on' || sortingAttribute);
                 if (shouldTriggerAction) {
-                    changeJsonAttribute.setValue(JSON.stringify(changes));
+                    const finalChanges = filterChanges(changes);
+                    changeJsonAttribute.setValue(JSON.stringify(finalChanges));
                 }
 
                 // Update UI to reflect new order
@@ -664,7 +679,6 @@ export function DragAndDropList({
         }
 
         // Clean up drag state
-        console.info('[handleDragEnd] Cleaning up drag state, setting isDragging to false');
         setDraggedItems([]);
         setDraggedOverItem(null);
         setIsDragging(false);
@@ -892,7 +906,6 @@ export function DragAndDropList({
                              * Separate from onDrop to avoid duplicate processing
                              */
                             onDragEnd={() => {
-                                console.info('[onDragEnd] Resetting drag state and isDragging flag');
                                 setDraggedItems([]);
                                 setDraggedOverItem(null);
                                 setDropIndicatorPosition(null);

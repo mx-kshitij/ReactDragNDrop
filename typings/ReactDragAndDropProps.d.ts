@@ -7,6 +7,8 @@ import { ComponentType, CSSProperties, ReactNode } from "react";
 import { DynamicValue, EditableValue, ListValue, ListAttributeValue, ListWidgetValue } from "mendix";
 import { Big } from "big.js";
 
+export type ChangeJsonModeEnum = "fullChange" | "targetOnly";
+
 export interface ReactDragAndDropContainerProps {
     name: string;
     class: string;
@@ -17,6 +19,7 @@ export interface ReactDragAndDropContainerProps {
     sortingAttribute?: ListAttributeValue<Big>;
     content?: ListWidgetValue;
     changeJsonAttribute: EditableValue<string>;
+    changeJsonMode: ChangeJsonModeEnum;
     jsonTemplate: string;
     listId: DynamicValue<string>;
     allowedLists?: DynamicValue<string>;
@@ -44,6 +47,7 @@ export interface ReactDragAndDropPreviewProps {
     sortingAttribute: string;
     content: { widgetCount: number; renderer: ComponentType<{ children: ReactNode; caption?: string }> };
     changeJsonAttribute: string;
+    changeJsonMode: ChangeJsonModeEnum;
     jsonTemplate: string;
     onDrop: {} | null;
     listId: string;
