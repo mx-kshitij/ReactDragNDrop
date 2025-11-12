@@ -20,6 +20,7 @@ export interface ReactDragAndDropContainerProps {
     uuidAttribute: ListAttributeValue<string>;
     sortingAttribute?: ListAttributeValue<Big>;
     content?: ListWidgetValue;
+    emptyListText?: DynamicValue<string>;
     changeJsonAttribute: EditableValue<string>;
     changeJsonMode: ChangeJsonModeEnum;
     jsonTemplate: string;
@@ -49,6 +50,7 @@ export interface ReactDragAndDropPreviewProps {
     uuidAttribute: string;
     sortingAttribute: string;
     content: { widgetCount: number; renderer: ComponentType<{ children: ReactNode; caption?: string }> };
+    emptyListText: string;
     changeJsonAttribute: string;
     changeJsonMode: ChangeJsonModeEnum;
     jsonTemplate: string;

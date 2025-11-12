@@ -43,6 +43,7 @@ export function DragAndDropList({
     dropOnColor,
     dropAfterColor,
     content,
+    emptyListText,
 }: DragAndDropListProps): ReactElement {
     // State management
     const [items, setItems] = useState<DragItem[]>([]);
@@ -793,7 +794,7 @@ export function DragAndDropList({
             }}
         >
             {items.length === 0 ? (
-                <div className="drag-and-drop-empty">No items to display</div>
+                <div className="drag-and-drop-empty">{emptyListText?.value || "No items to display"}</div>
             ) : (
                 <ul className="drag-and-drop-items">
                     {items.map((item, index) => (

@@ -29,6 +29,10 @@
                 <caption>Content</caption>
                 <description>Content to display for each item</description>
             </property>
+            <property key="emptyListText" type="textTemplate" required="false">
+                <caption>Empty List Text</caption>
+                <description>Text to display when the list is empty. Defaults to "No items to display".</description>
+            </property>
         </propertyGroup>
         <propertyGroup caption="Change Tracking">
             <property key="changeJsonAttribute" type="attribute" onChange="onDrop" required="true">

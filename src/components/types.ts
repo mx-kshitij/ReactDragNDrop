@@ -46,6 +46,8 @@ export interface DragAndDropListProps {
     dropAfterColor?: DynamicValue<string>;
     /** Optional: Custom widget content to render for each item */
     content?: ListWidgetValue;
+    /** Optional: Text to display when list is empty */
+    emptyListText?: DynamicValue<string>;
 }
 
 /**
