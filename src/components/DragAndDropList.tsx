@@ -49,6 +49,7 @@ export function DragAndDropList({
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [dropIndicatorPosition, setDropIndicatorPosition] = useState<'before' | 'after' | 'on' | null>(null);
     const [currentDropType, setCurrentDropType] = useState<'before' | 'after' | 'on' | null>(null);
+    const [isDragging, setIsDragging] = useState<boolean>(false);
 
     /**
      * Initialize items from datasource
@@ -77,27 +78,44 @@ export function DragAndDropList({
     /**
      * Handle item click for multi-select functionality
      * 
-     * Only active when enableMultiSelect is true and Shift key is pressed
+     * Only active when enableMultiSelect is true
      * Toggles selection state for the clicked item
+     * Uses mousedown/mouseup to distinguish clicks from drags
      */
     const handleItemClick = (item: DragItem, event: React.MouseEvent) => {
+        console.info('[handleItemClick] Called for item:', item.uuid, 'enableMultiSelect:', enableMultiSelect);
+        
         if (!enableMultiSelect) {
+            console.info('[handleItemClick] Multi-select disabled, exiting');
             return;
         }
 
-        if (event.shiftKey) {
-            // Only prevent default when we're doing selection
-            event.preventDefault();
-            
-            // Toggle selection on shift+click
-            const newSelected = new Set(selectedItems);
-            if (newSelected.has(item.uuid)) {
-                newSelected.delete(item.uuid);
+        // Don't prevent default - let drag work normally
+        
+        console.info('[handleItemClick] Setting timer for item:', item.uuid);
+        
+        // Set a flag to detect if drag starts
+        // If drag starts within a short time, we won't toggle selection
+        const clickTimer = setTimeout(() => {
+            console.info('[handleItemClick] Timer fired for item:', item.uuid, 'isDragging:', isDragging);
+            if (!isDragging) {
+                // Toggle selection on click (no shift required)
+                const newSelected = new Set(selectedItems);
+                if (newSelected.has(item.uuid)) {
+                    console.info('[handleItemClick] Deselecting item:', item.uuid);
+                    newSelected.delete(item.uuid);
+                } else {
+                    console.info('[handleItemClick] Selecting item:', item.uuid);
+                    newSelected.add(item.uuid);
+                }
+                setSelectedItems(newSelected);
             } else {
-                newSelected.add(item.uuid);
+                console.info('[handleItemClick] Drag in progress, not toggling selection');
             }
-            setSelectedItems(newSelected);
-        }
+        }, 150); // Small delay to detect drag start
+        
+        // Store timer to clean up if needed
+        (event.currentTarget as any).__clickTimer = clickTimer;
     };
 
     /**
@@ -115,9 +133,15 @@ export function DragAndDropList({
      * - Includes ALL source list items so target can calculate re-indexing for remaining items
      */
     const handleDragStart = (item: DragItem, event: React.DragEvent<HTMLLIElement>) => {
+        console.info('[handleDragStart] Called for item:', item.uuid, 'isDragging before:', isDragging);
+        
         // Stop propagation to prevent parent list's handleDragStart from being called
         // This is critical for nested lists - only the innermost list should handle the drag
         event.stopPropagation();
+        
+        // Set dragging flag to prevent click handler from firing
+        setIsDragging(true);
+        console.info('[handleDragStart] Set isDragging to true');
         
         // Store drag context in DOM attributes on the list container for cross-instance access
         // This is important for nested lists - we set it on the closest list container
@@ -640,8 +664,10 @@ export function DragAndDropList({
         }
 
         // Clean up drag state
+        console.info('[handleDragEnd] Cleaning up drag state, setting isDragging to false');
         setDraggedItems([]);
         setDraggedOverItem(null);
+        setIsDragging(false);
     };
 
 
@@ -866,10 +892,13 @@ export function DragAndDropList({
                              * Separate from onDrop to avoid duplicate processing
                              */
                             onDragEnd={() => {
+                                console.info('[onDragEnd] Resetting drag state and isDragging flag');
                                 setDraggedItems([]);
                                 setDraggedOverItem(null);
                                 setDropIndicatorPosition(null);
                                 setCurrentDropType(null);
+                                setIsDragging(false);
+                                setSelectedItems(new Set()); // Clear selection after drag
                                 // Clear drag context attributes from the list container
                                 const listContainer = document.querySelector('.drag-and-drop-list[data-drag-source-list]') as HTMLElement;
                                 if (listContainer) {

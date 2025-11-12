@@ -64,7 +64,7 @@
             </property>
             <property key="enableMultiSelect" type="boolean" defaultValue="false">
                 <caption>Enable Multi-Select</caption>
-                <description>Allow selecting multiple items by holding Shift key</description>
+                <description>Allow selecting multiple items by clicking. Selected items can be dragged together.</description>
             </property>
             <property key="showDragHandle" type="boolean" defaultValue="true">
                 <caption>Show Drag Handle</caption>
