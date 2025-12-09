@@ -6,28 +6,28 @@
  * Check if a target list is allowed to receive items from a source list
  * 
  * Rules:
- * - Same-list drops (sourceListId === targetListId) are ALWAYS allowed
+ * - Same-list drops (sourceListId === targetListId) are only allowed if the source list ID is in allowedLists
  * - Cross-list drops are only allowed if targetListId is in the allowedLists configuration
- * - If allowedLists is empty or undefined, only same-list drops are allowed
+ * - If allowedLists is empty or undefined, no drops are allowed
  * 
  * @param sourceAllowedLists - The allowedLists string from the SOURCE list (comma-separated)
+ * @param _sourceListId - The ID of the list items are being dragged FROM (unused but kept for API clarity)
  * @param targetListId - The ID of the list items are being dropped TO
  * @returns true if the drop is allowed, false otherwise
  */
-export function isDropAllowed(sourceAllowedLists: string | undefined, targetListId: string): boolean {
-    // For cross-list drops, check if target is in allowedLists
+export function isDropAllowed(sourceAllowedLists: string | undefined, _sourceListId: string, targetListId: string): boolean {
     if (!sourceAllowedLists || sourceAllowedLists.trim() === "") {
-        // No allowed lists configured, so only same-list drops are permitted
+        // No allowed lists configured, so no drops are permitted
         return false;
     }
 
-    // Simply check if the target list ID is in the comma-separated allowed lists string
-    // e.g., if allowedLists = "inprogress,done" and targetListId = "inprogress" → true
+    // Parse the allowed lists
     const allowedListsArray = sourceAllowedLists
         .split(",")
         .map(id => id.trim())
         .filter(id => id.length > 0);
 
+    // Check if target list ID is in the allowed lists
     return allowedListsArray.includes(targetListId);
 }
 

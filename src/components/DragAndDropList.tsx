@@ -214,28 +214,20 @@ export function DragAndDropList({
         try {
             // Try to read the drag data from dataTransfer
             const dragDataStr = event.dataTransfer?.getData("application/x-dragdroplist");
-            let sourceAllowedLists = "";
+            let sourceListId = listId; // Default to same list
             
             if (dragDataStr) {
                 try {
                     const dragData = JSON.parse(dragDataStr);
-                    sourceAllowedLists = dragData.sourceAllowedLists || "";
+                    sourceListId = dragData.sourceListId || listId;
                 } catch (e) {
-                    // If we can't parse, proceed with empty allowed lists
+                    // If we can't parse, assume same-list drag
                 }
             }
 
-            // If no drag is in progress or allowed lists are empty, show highlight (same-list drag)
-            if (!sourceAllowedLists || sourceAllowedLists.trim() === "") {
-                // Same-list drag, show highlight on hover
-                if (draggedOverItem?.uuid !== item.uuid) {
-                    setDraggedOverItem(item);
-                }
-                return;
-            }
-
-            // Cross-list drag: only show highlight if item is in allowed lists
-            const isAllowed = isItemInAllowedLists(item.listName, sourceAllowedLists);
+            // Check if this drop is allowed based on allowedLists
+            const allowedListsStr = allowedLists || "";
+            const isAllowed = isDropAllowed(allowedListsStr, sourceListId, listId);
             
             if (isAllowed && draggedOverItem?.uuid !== item.uuid) {
                 setDraggedOverItem(item);
@@ -244,9 +236,9 @@ export function DragAndDropList({
                 setDraggedOverItem(null);
             }
         } catch (err) {
-            // If anything goes wrong, just show the highlight as fallback
-            if (draggedOverItem?.uuid !== item.uuid) {
-                setDraggedOverItem(item);
+            // If anything goes wrong, don't show highlight to be safe
+            if (draggedOverItem?.uuid === item.uuid) {
+                setDraggedOverItem(null);
             }
         }
     };
@@ -331,9 +323,9 @@ export function DragAndDropList({
         // VALIDATION: Check if this drop is allowed based on allowedLists configuration
         if (isCrossListDrop) {
             const sourceAllowedLists = (crossListData as any)?.sourceListAllowedLists;
-            if (!isDropAllowed(sourceAllowedLists, listId)) {
+            const sourceListId = crossListData?.sourceListId || "";
+            if (!isDropAllowed(sourceAllowedLists, sourceListId, listId)) {
                 // Drop is not allowed - reject it silently
-                const sourceListId = crossListData?.sourceListId;
                 console.warn(`Drop rejected: List "${listId}" is not in the allowed lists for source list "${sourceListId}". Allowed: "${sourceAllowedLists}"`);
                 setDraggedItems([]);
                 setDraggedOverItem(null);
@@ -568,6 +560,16 @@ export function DragAndDropList({
             }
         } else {
             // SAME-LIST REORDERING
+            // Check if same-list drop is allowed (listId must be in allowedLists)
+            const allowedListsStr = allowedLists || "";
+            if (!isDropAllowed(allowedListsStr, listId, listId)) {
+                // Same-list drop is not allowed - reject it silently
+                console.warn(`Same-list drop rejected: List "${listId}" is not in its own allowed lists. Allowed: "${allowedListsStr}"`);
+                setDraggedItems([]);
+                setDraggedOverItem(null);
+                return;
+            }
+            
             // draggedOverItem is guaranteed to exist at this point (checked in validation)
             const draggedOverItemSafe = draggedOverItem!; // Non-null assertion safe here
             
@@ -725,7 +727,8 @@ export function DragAndDropList({
                         // For cross-list drags, only allow drop if target is in source's allowedLists
                         if (isCrossListDrag) {
                             const sourceAllowedLists = (dragData as any)?.sourceListAllowedLists;
-                            if (!isDropAllowed(sourceAllowedLists, listId)) {
+                            const sourceListId = dragData.sourceListId || "";
+                            if (!isDropAllowed(sourceAllowedLists, sourceListId, listId)) {
                                 e.dataTransfer.dropEffect = "none";
                                 return;
                             }
@@ -765,7 +768,8 @@ export function DragAndDropList({
                         // Additional check: verify that this cross-list drop is allowed
                         // Note: sourceListAllowedLists comes from the source list's configuration
                         const sourceAllowedLists = (crossListData as any)?.sourceListAllowedLists;
-                        if (hasValidDropData && !isDropAllowed(sourceAllowedLists, listId)) {
+                        const sourceListId = crossListData.sourceListId || "";
+                        if (hasValidDropData && !isDropAllowed(sourceAllowedLists, sourceListId, listId)) {
                             console.warn(`Drop rejected: List "${listId}" is not in the allowed lists for source list "${crossListData.sourceListId}". Allowed: "${sourceAllowedLists}"`);
                             return;
                         }
