@@ -43,7 +43,7 @@ export function ReactDragAndDrop({
     dropOnColor,
     dropAfterColor,
     content,
-    emptyListText,
+    emptyListContent,
 }: ReactDragAndDropContainerProps): ReactElement {
     return (
         <DragAndDropList
@@ -63,7 +63,7 @@ export function ReactDragAndDrop({
             dropOnColor={dropOnColor}
             dropAfterColor={dropAfterColor}
             content={content}
-            emptyListText={emptyListText}
+            emptyListContent={emptyListContent}
         />
     );
 }

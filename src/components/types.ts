@@ -1,4 +1,5 @@
 import { ListValue, ListWidgetValue, ListAttributeValue, EditableValue, ObjectItem, DynamicValue } from "mendix";
+import { ReactNode } from "react";
 
 /**
  * Enumeration for drop type (where items are dropped)
@@ -46,8 +47,8 @@ export interface DragAndDropListProps {
     dropAfterColor?: DynamicValue<string>;
     /** Optional: Custom widget content to render for each item */
     content?: ListWidgetValue;
-    /** Optional: Text to display when list is empty */
-    emptyListText?: DynamicValue<string>;
+    /** Optional: Custom widget content to display when list is empty */
+    emptyListContent?: ReactNode;
 }
 
 /**
