@@ -3,7 +3,6 @@ import "../ui/DragAndDropList.css";
 import { DragItem, ChangeRecord, DragAndDropListProps } from "./types";
 import {
     isDropAllowed,
-    isItemInAllowedLists,
     getDragContextFromDOM,
     setDragContextOnDOM,
     clearDragContextFromDOM,
@@ -210,24 +209,13 @@ export function DragAndDropList({
      * Optimization: Only update state if the draggedOverItem actually changed
      * This prevents unnecessary re-renders and reduces flickering
      */
-    const handleDragOver = (item: DragItem, event: React.DragEvent<HTMLLIElement>) => {
+    const handleDragOver = (item: DragItem, _event: React.DragEvent<HTMLLIElement>) => {
         try {
-            // Try to read the drag data from dataTransfer
-            const dragDataStr = event.dataTransfer?.getData("application/x-dragdroplist");
-            let sourceListId = listId; // Default to same list
-            
-            if (dragDataStr) {
-                try {
-                    const dragData = JSON.parse(dragDataStr);
-                    sourceListId = dragData.sourceListId || listId;
-                } catch (e) {
-                    // If we can't parse, assume same-list drag
-                }
-            }
+            // Read drag context from DOM since dataTransfer.getData() doesn't work during dragover
+            const { sourceListId, allowedLists: sourceAllowedLists } = getDragContextFromDOM();
 
-            // Check if this drop is allowed based on allowedLists
-            const allowedListsStr = allowedLists || "";
-            const isAllowed = isDropAllowed(allowedListsStr, sourceListId, listId);
+            // Check if this drop is allowed based on source's allowedLists
+            const isAllowed = isDropAllowed(sourceAllowedLists, sourceListId, listId);
             
             if (isAllowed && draggedOverItem?.uuid !== item.uuid) {
                 setDraggedOverItem(item);
@@ -325,8 +313,6 @@ export function DragAndDropList({
             const sourceAllowedLists = (crossListData as any)?.sourceListAllowedLists;
             const sourceListId = crossListData?.sourceListId || "";
             if (!isDropAllowed(sourceAllowedLists, sourceListId, listId)) {
-                // Drop is not allowed - reject it silently
-                console.warn(`Drop rejected: List "${listId}" is not in the allowed lists for source list "${sourceListId}". Allowed: "${sourceAllowedLists}"`);
                 setDraggedItems([]);
                 setDraggedOverItem(null);
                 return;
@@ -563,8 +549,6 @@ export function DragAndDropList({
             // Check if same-list drop is allowed (listId must be in allowedLists)
             const allowedListsStr = allowedLists || "";
             if (!isDropAllowed(allowedListsStr, listId, listId)) {
-                // Same-list drop is not allowed - reject it silently
-                console.warn(`Same-list drop rejected: List "${listId}" is not in its own allowed lists. Allowed: "${allowedListsStr}"`);
                 setDraggedItems([]);
                 setDraggedOverItem(null);
                 return;
@@ -770,7 +754,6 @@ export function DragAndDropList({
                         const sourceAllowedLists = (crossListData as any)?.sourceListAllowedLists;
                         const sourceListId = crossListData.sourceListId || "";
                         if (hasValidDropData && !isDropAllowed(sourceAllowedLists, sourceListId, listId)) {
-                            console.warn(`Drop rejected: List "${listId}" is not in the allowed lists for source list "${crossListData.sourceListId}". Allowed: "${sourceAllowedLists}"`);
                             return;
                         }
                     }
@@ -859,36 +842,13 @@ export function DragAndDropList({
                                 e.preventDefault();
                                 e.stopPropagation();
                                 
-                                // Get source list context from DOM attributes set during drag start
-                                const { sourceListId, allowedLists: sourceAllowedLists } = getDragContextFromDOM();
+                                // Call handleDragOver which will validate based on allowedLists
+                                handleDragOver(item, e);
                                 
                                 // Determine drop zone based on cursor location (2-zone or 3-zone based on allowDropOn)
                                 const calculatedDropZone = getDropZone(e.currentTarget, e.clientY);
-                                
-                                // Always allow same-list drops
-                                if (sourceListId === item.listName) {
-                                    e.dataTransfer.dropEffect = "move";
-                                    handleDragOver(item, e);
-                                    setDropIndicatorPosition(calculatedDropZone);
-                                    setCurrentDropType(calculatedDropZone);
-                                } else {
-                                    // Cross-list drop - check if target is in allowed lists
-                                    const isAllowed = isItemInAllowedLists(item.listName, sourceAllowedLists);
-                                    if (isAllowed) {
-                                        e.dataTransfer.dropEffect = "move";
-                                        handleDragOver(item, e);
-                                        setDropIndicatorPosition(calculatedDropZone);
-                                        setCurrentDropType(calculatedDropZone);
-                                    } else {
-                                        e.dataTransfer.dropEffect = "none";
-                                        // Clear highlight if this was previously the drag target
-                                        if (draggedOverItem?.uuid === item.uuid) {
-                                            setDraggedOverItem(null);
-                                            setDropIndicatorPosition(null);
-                                            setCurrentDropType(null);
-                                        }
-                                    }
-                                }
+                                setDropIndicatorPosition(calculatedDropZone);
+                                setCurrentDropType(calculatedDropZone);
                             }}
                             /**
                              * onDragLeave: Clear drop target when user drags away
