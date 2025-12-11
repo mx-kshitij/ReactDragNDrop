@@ -16,6 +16,11 @@
                 <description>Attribute containing the unique identifier for each item</description>
                 <attributeTypes>
                     <attributeType name="String"/>
+                    <attributeType name="AutoNumber"/>
+                    <attributeType name="DateTime"/>
+                    <attributeType name="Integer"/>
+                    <attributeType name="Long"/>
+                    <attributeType name="Decimal"/>
                 </attributeTypes>
             </property>
             <property key="sortingAttribute" type="attribute" dataSource="dataSource" required="false">
