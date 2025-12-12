@@ -139,3 +139,56 @@ export function removeOtherOverlays(target: HTMLElement): void {
 export function removeAllOverlays(): void {
     document.querySelectorAll('.drop-overlay-mask').forEach(overlay => overlay.remove());
 }
+
+/**
+ * Handle drag over event for an item with overlay management
+ */
+export function handleItemDragOver(
+    target: HTMLElement,
+    calculatedDropZone: 'before' | 'after' | 'on' | null,
+    isDraggedOver: boolean,
+    dropOption: string,
+    allowDropOn: boolean,
+    dropBeforeColor: any,
+    dropOnColor: any,
+    dropAfterColor: any
+): void {
+    // Remove overlays from other items
+    removeOtherOverlays(target);
+    
+    // Only show overlay if drop is allowed
+    if (calculatedDropZone && isDraggedOver) {
+        let overlay = target.querySelector('.drop-overlay-mask') as HTMLElement;
+        
+        // Get overlay color based on drop zone
+        const overlayColor = getOverlayColor(
+            calculatedDropZone,
+            dropBeforeColor,
+            dropOnColor,
+            dropAfterColor
+        );
+        
+        // Calculate position based on drop zone and mode
+        const rect = target.getBoundingClientRect();
+        const { top, height } = calculateOverlayPosition(
+            calculatedDropZone,
+            dropOption,
+            allowDropOn,
+            rect.height
+        );
+        
+        // Create overlay if it doesn't exist
+        if (!overlay) {
+            overlay = createOverlayElement(target);
+        }
+        
+        // Update overlay appearance with smooth transitions
+        updateOverlay(overlay, { color: overlayColor, top, height });
+    } else {
+        // Fade out and remove overlay if drop not allowed or no drop zone
+        const overlay = target.querySelector('.drop-overlay-mask') as HTMLElement;
+        if (overlay) {
+            removeOverlay(overlay);
+        }
+    }
+}

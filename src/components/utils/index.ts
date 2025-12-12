@@ -15,7 +15,8 @@ export {
     removeOverlay,
     removeOtherOverlays,
     removeAllOverlays,
-} from "./overlayManager";
+    handleItemDragOver,
+} from './overlayManager';
 export {
     generateSourceListReindexing,
     handleDropToEmptyList,

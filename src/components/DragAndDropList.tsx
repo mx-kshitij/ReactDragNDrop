@@ -1,19 +1,12 @@
 import { ReactElement, createElement, useState, useEffect } from "react";
 import "../ui/DragAndDropList.css";
 import { DragItem, ChangeRecord, DragAndDropListProps } from "./types";
+import { DragDropListItem } from "./DragDropListItem";
 import {
     isDropAllowed,
     getDragContextFromDOM,
     setDragContextOnDOM,
-    clearDragContextFromDOM,
     initializeItems,
-    isDraggedItem as checkIsDraggedItem,
-    calculateOverlayPosition,
-    getOverlayColor,
-    createOverlayElement,
-    updateOverlay,
-    removeOverlay,
-    removeOtherOverlays,
     removeAllOverlays,
     handleDropToEmptyList,
     handleOnDrop,
@@ -547,182 +540,33 @@ export function DragAndDropList({
             ) : (
                 <ul className="drag-and-drop-items">
                     {items.map((item, index) => (
-                        <li
+                        <DragDropListItem
                             key={item.uuid}
-                            /**
-                             * Dynamic CSS classes applied based on item state:
-                             * - dragging: Applied when item is being dragged (opacity 0.5)
-                             * - drag-over: Applied when user drags over this item (drop target)
-                             * - selected: Applied when item is multi-selected (green highlight)
-                             * - no-handle: Applied when drag handle icon should be hidden
-                             * - list-{listName}: Applied based on item's list membership (for allowed list validation)
-                             */
-                            className={`drag-and-drop-item ${
-                                checkIsDraggedItem(item, draggedItems) ? "dragging" : ""
-                            } ${draggedOverItem?.uuid === item.uuid ? "drag-over" : ""} ${
-                                draggedOverItem?.uuid === item.uuid && dropIndicatorPosition ? `drop-${dropIndicatorPosition}` : ""
-                            } ${
-                                selectedItems.has(item.uuid) ? "selected" : ""
-                            } ${!showDragHandle ? "no-handle" : ""} ${
-                                item.listName ? `list-${item.listName}` : ""
-                            }`}
-                            /**
-                             * Inline styles for drop target highlighting
-                             * 
-                             * Only set backgroundColor when item is being dragged over
-                             * Otherwise use undefined to let CSS handle the default styling
-                             * 
-                             * Respects selected items: if item is selected, don't override with inline style
-                             * Let CSS class handle selected styling instead
-                             * 
-                             * This approach allows CSS transitions to work smoothly
-                             * instead of adding/removing properties abruptly
-                             */
-                            style={{
-                                backgroundColor: selectedItems.has(item.uuid)
-                                    ? undefined
-                                    : undefined, // All drop feedback now handled by overlay mask
-                                '--drop-overlay-color': draggedOverItem?.uuid === item.uuid && dropIndicatorPosition === 'on'
-                                    ? (dropOnColor?.value || '#c8e6c9')
-                                    : 'transparent',
-                                padding: '10px 12px',
-                                borderRadius: '4px',
-                                transition: 'background-color 0.3s ease',
-                            } as React.CSSProperties}
-                            draggable
-                            onMouseDown={(e) => handleItemClick(item, e as any)}
-                            onDragStart={(e) => handleDragStart(item, e)}
-                            /**
-                             * onDragOver: Validate drop target and show/hide highlight
-                             * Also sets dropEffect to signal whether drop is allowed
-                             */
-                            onDragOver={e => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                
-                                // Call handleDragOver which will validate based on allowedLists
-                                handleDragOver(item, e);
-                                
-                                // Determine drop zone based on cursor location (2-zone or 3-zone based on allowDropOn)
-                                const calculatedDropZone = getDropZone(e.currentTarget, e.clientY);
-                                setDropIndicatorPosition(calculatedDropZone);
-                                setCurrentDropType(calculatedDropZone);
-                                
-                                const target = e.currentTarget as HTMLElement;
-                                
-                                // Remove overlays from other items
-                                removeOtherOverlays(target);
-                                
-                                // Only show overlay if drop is allowed (draggedOverItem is set by handleDragOver)
-                                if (calculatedDropZone && draggedOverItem?.uuid === item.uuid) {
-                                    let overlay = target.querySelector('.drop-overlay-mask') as HTMLElement;
-                                    
-                                    // Get overlay color based on drop zone
-                                    const overlayColor = getOverlayColor(
-                                        calculatedDropZone,
-                                        dropBeforeColor,
-                                        dropOnColor,
-                                        dropAfterColor
-                                    );
-                                    
-                                    // Calculate position based on drop zone and mode
-                                    const rect = target.getBoundingClientRect();
-                                    const { top, height } = calculateOverlayPosition(
-                                        calculatedDropZone,
-                                        dropOption,
-                                        allowDropOn,
-                                        rect.height
-                                    );
-                                    
-                                    // Create overlay if it doesn't exist
-                                    if (!overlay) {
-                                        overlay = createOverlayElement(target);
-                                    }
-                                    
-                                    // Update overlay appearance with smooth transitions
-                                    updateOverlay(overlay, { color: overlayColor, top, height });
-                                } else {
-                                    // Fade out and remove overlay if drop not allowed or no drop zone
-                                    const overlay = target.querySelector('.drop-overlay-mask') as HTMLElement;
-                                    if (overlay) {
-                                        removeOverlay(overlay);
-                                    }
-                                }
-                            }}
-                            /**
-                             * onDragLeave: Clear drop target when user drags away
-                             * Only clear if leaving THIS specific item (prevents flickering)
-                             */
-                            onDragLeave={e => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                if (draggedOverItem?.uuid === item.uuid) {
-                                    setDraggedOverItem(null);
-                                    setDropIndicatorPosition(null);
-                                    setCurrentDropType(null);
-                                    
-                                    // Remove overlay mask
-                                    const target = e.currentTarget as HTMLElement;
-                                    const overlay = target.querySelector('.drop-overlay-mask');
-                                    if (overlay) {
-                                        overlay.remove();
-                                    }
-                                }
-                            }}
-                            /**
-                             * onDrop: Handle the actual drop operation
-                             * Triggers the reordering logic
-                             */
-                            onDrop={e => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                
-                                // Remove overlay mask before handling drop
-                                const target = e.currentTarget as HTMLElement;
-                                const overlay = target.querySelector('.drop-overlay-mask');
-                                if (overlay) {
-                                    overlay.remove();
-                                }
-                                
-                                handleDragEnd(e);
-                            }}
-                            /**
-                             * onDragEnd: Cleanup drag state after drop completes
-                             * Separate from onDrop to avoid duplicate processing
-                             */
-                            onDragEnd={() => {
-                                setDraggedItems([]);
-                                setDraggedOverItem(null);
-                                setDropIndicatorPosition(null);
-                                setCurrentDropType(null);
-                                setIsDragging(false);
-                                setSelectedItems(new Set()); // Clear selection after drag
-                                
-                                // Clean up all overlay masks to prevent flickering
-                                removeAllOverlays();
-                                
-                                // Clear drag context attributes from the list container
-                                const listContainer = document.querySelector('.drag-and-drop-list[data-drag-source-list]') as HTMLElement;
-                                if (listContainer) {
-                                    clearDragContextFromDOM(listContainer);
-                                }
-                            }}
-                        >
-                            {/* Drag handle icon (optional, controlled by showDragHandle prop) */}
-                            {showDragHandle && <span className="drag-handle">⋮⋮</span>}
-                            
-                            {/* Item content - either custom widgets or UUID fallback */}
-                            {content && item.object ? (
-                                <div className="drag-item-content">
-                                    {content.get(item.object)}
-                                </div>
-                            ) : (
-                                <div className="drag-item-content">{item.uuid}</div>
-                            )}
-                            
-                            {/* Item index number display */}
-                            <span className="drag-item-index">{index + 1}</span>
-                        </li>
+                            item={item}
+                            index={index}
+                            draggedItems={draggedItems}
+                            draggedOverItem={draggedOverItem}
+                            dropIndicatorPosition={dropIndicatorPosition}
+                            selectedItems={selectedItems}
+                            showDragHandle={showDragHandle}
+                            dropOnColor={dropOnColor}
+                            content={content}
+                            dropOption={dropOption}
+                            allowDropOn={allowDropOn}
+                            dropBeforeColor={dropBeforeColor}
+                            dropAfterColor={dropAfterColor}
+                            handleItemClick={handleItemClick}
+                            handleDragStart={handleDragStart}
+                            handleDragOver={handleDragOver}
+                            handleDragEnd={handleDragEnd}
+                            setDraggedOverItem={setDraggedOverItem}
+                            setDropIndicatorPosition={setDropIndicatorPosition}
+                            setCurrentDropType={setCurrentDropType}
+                            setDraggedItems={setDraggedItems}
+                            setIsDragging={setIsDragging}
+                            setSelectedItems={setSelectedItems}
+                            getDropZone={getDropZone}
+                        />
                     ))}
                 </ul>
             )}
