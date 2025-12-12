@@ -870,57 +870,75 @@ export function DragAndDropList({
                                         : (dropAfterColor?.value || '#fff9c4');
                                     
                                     // Calculate position based on drop zone and mode
-                                    let overlayPosition = '';
+                                    let top = '0';
+                                    let height = '100%';
+                                    
                                     if (dropOption === 'auto') {
                                         // Auto mode: show overlay only on the specific zone
                                         const rect = target.getBoundingClientRect();
-                                        const height = rect.height;
+                                        const itemHeight = rect.height;
                                         
                                         if (allowDropOn) {
                                             // 3-zone mode
-                                            const thirdHeight = height / 3;
+                                            const thirdHeight = itemHeight / 3;
                                             if (calculatedDropZone === 'before') {
-                                                overlayPosition = `top: 0; left: 0; right: 0; height: ${thirdHeight}px;`;
+                                                top = '0';
+                                                height = `${thirdHeight}px`;
                                             } else if (calculatedDropZone === 'on') {
-                                                overlayPosition = `top: ${thirdHeight}px; left: 0; right: 0; height: ${thirdHeight}px;`;
+                                                top = `${thirdHeight}px`;
+                                                height = `${thirdHeight}px`;
                                             } else { // after
-                                                overlayPosition = `top: ${thirdHeight * 2}px; left: 0; right: 0; height: ${thirdHeight}px;`;
+                                                top = `${thirdHeight * 2}px`;
+                                                height = `${thirdHeight}px`;
                                             }
                                         } else {
                                             // 2-zone mode
-                                            const halfHeight = height / 2;
+                                            const halfHeight = itemHeight / 2;
                                             if (calculatedDropZone === 'before') {
-                                                overlayPosition = `top: 0; left: 0; right: 0; height: ${halfHeight}px;`;
+                                                top = '0';
+                                                height = `${halfHeight}px`;
                                             } else { // after
-                                                overlayPosition = `top: ${halfHeight}px; left: 0; right: 0; height: ${halfHeight}px;`;
+                                                top = `${halfHeight}px`;
+                                                height = `${halfHeight}px`;
                                             }
                                         }
-                                    } else {
-                                        // Forced mode: show overlay on entire item
-                                        overlayPosition = 'top: 0; left: 0; right: 0; bottom: 0;';
                                     }
                                     
                                     if (!overlay) {
                                         overlay = document.createElement('div');
                                         overlay.className = 'drop-overlay-mask';
+                                        overlay.style.cssText = `
+                                            position: absolute;
+                                            left: 0;
+                                            right: 0;
+                                            pointer-events: none;
+                                            z-index: 9999;
+                                            border-radius: 4px;
+                                            transition: top 0.15s ease-out, height 0.15s ease-out, background-color 0.15s ease-out, opacity 0.15s ease-out;
+                                            opacity: 0;
+                                        `;
                                         target.style.position = 'relative';
                                         target.appendChild(overlay);
+                                        
+                                        // Trigger reflow to enable transition
+                                        overlay.offsetHeight;
                                     }
                                     
-                                    overlay.style.cssText = `
-                                        position: absolute;
-                                        ${overlayPosition}
-                                        background-color: ${overlayColor};
-                                        opacity: 0.7;
-                                        pointer-events: none;
-                                        z-index: 9999;
-                                        border-radius: 4px;
-                                    `;
+                                    // Update overlay properties - transitions will animate the changes
+                                    overlay.style.top = top;
+                                    overlay.style.height = height;
+                                    overlay.style.backgroundColor = overlayColor;
+                                    overlay.style.opacity = '0.7';
                                 } else {
-                                    // Remove overlay from current item if drop not allowed or no drop zone
-                                    const overlay = target.querySelector('.drop-overlay-mask');
+                                    // Fade out and remove overlay from current item if drop not allowed or no drop zone
+                                    const overlay = target.querySelector('.drop-overlay-mask') as HTMLElement;
                                     if (overlay) {
-                                        overlay.remove();
+                                        overlay.style.opacity = '0';
+                                        setTimeout(() => {
+                                            if (overlay.parentNode) {
+                                                overlay.remove();
+                                            }
+                                        }, 150); // Match transition duration
                                     }
                                 }
                             }}
