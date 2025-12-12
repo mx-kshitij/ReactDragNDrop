@@ -8,6 +8,17 @@ import {
     clearDragContextFromDOM,
     initializeItems,
     isDraggedItem as checkIsDraggedItem,
+    calculateOverlayPosition,
+    getOverlayColor,
+    createOverlayElement,
+    updateOverlay,
+    removeOverlay,
+    removeOtherOverlays,
+    removeAllOverlays,
+    handleDropToEmptyList,
+    handleOnDrop,
+    handleCrossListBeforeAfterDrop,
+    handleSameListReorder,
 } from "./utils";
 
 /**
@@ -292,7 +303,7 @@ export function DragAndDropList({
      * Cross-list: [{ uuid, newIndex, sourceListId: "list1", targetListId: "list2" }, ...]
      */
     const handleDragEnd = (event?: React.DragEvent<HTMLElement>) => {
-        // Try to read cross-list data from dataTransfer
+        // Parse cross-list data from dataTransfer
         let crossListData: { sourceListId: string; itemUuids: string[]; sourceListAllItems?: Array<{ uuid: string; originalIndex: number }> } | null = null;
         if (event) {
             try {
@@ -305,10 +316,9 @@ export function DragAndDropList({
             }
         }
 
-        // Determine if this is a cross-list drop
         const isCrossListDrop = crossListData && crossListData.sourceListId !== listId;
         
-        // VALIDATION: Check if this drop is allowed based on allowedLists configuration
+        // Validate drop is allowed
         if (isCrossListDrop) {
             const sourceAllowedLists = (crossListData as any)?.sourceListAllowedLists;
             const sourceListId = crossListData?.sourceListId || "";
@@ -319,18 +329,14 @@ export function DragAndDropList({
             }
         }
         
-        // For same-list: require both draggedItems and draggedOverItem
-        // For cross-list: only require draggedOverItem IF list is not empty
+        // Validate required data exists
         if (isCrossListDrop) {
-            // Cross-list drop - use data from dataTransfer
             if (!crossListData) {
                 setDraggedItems([]);
                 setDraggedOverItem(null);
                 return;
             }
-            // For cross-list, draggedOverItem is optional (can drop to empty list)
         } else {
-            // Same-list drop - use local draggedItems state
             if (draggedItems.length === 0 || !draggedOverItem) {
                 setDraggedItems([]);
                 setDraggedOverItem(null);
@@ -342,333 +348,9 @@ export function DragAndDropList({
         const sourceListId = crossListData?.sourceListId || (draggedItems[0]?.listId ?? listId);
         
         if (isCrossListDrop) {
-            // CROSS-LIST MOVE
-            // Items are from a different list and being dropped into this list
-            // 
-            // IMPORTANT: For cross-list moves, we need to send changes for:
-            // 1. Target list: All items with updated indices (new + shifted existing)
-            // 2. Source list: Remaining items with re-calculated indices after removal
-            // 
-            // We include ALL changes (source + target) in a single array
-            
-            const newItems = [...items];
-            
-            // Handle empty list case - add items at the beginning
-            if (items.length === 0) {
-                
-                // For cross-list drops to empty list:
-                // 1. Target changes: items being added
-                // 2. Source changes: remaining items in source list get re-indexed
-                const allChanges: ChangeRecord[] = [];
-
-                // Create target change records for each item being dragged
-                itemsBeingDragged.forEach((uuid, idx) => {
-                    allChanges.push({
-                        uuid: uuid,
-                        newIndex: idx, // Will be 0 for first item, 1 for second, etc.
-                        sourceListId: sourceListId,
-                        targetListId: listId,
-                        dropType: "after", // Default drop type for empty list drops
-                        // No targetItemUuid for empty list
-                    });
-                });
-
-                // Extract and process source list for re-indexing remaining items
-                if (crossListData?.sourceListAllItems) {
-                    const sourceAllItems = crossListData.sourceListAllItems;
-                    const movedUuids = new Set(itemsBeingDragged);
-                    
-                    // Get remaining items (not being moved) sorted by original index
-                    const remainingItems = sourceAllItems
-                        .filter((item: { uuid: string; originalIndex: number }) => !movedUuids.has(item.uuid))
-                        .sort((a: { uuid: string; originalIndex: number }, b: { uuid: string; originalIndex: number }) => a.originalIndex - b.originalIndex);
-                    
-                    // Re-index remaining items (just new indices, no position/target)
-                    remainingItems.forEach((item: { uuid: string; originalIndex: number }, newIndex: number) => {
-                        allChanges.push({
-                            uuid: item.uuid,
-                            newIndex: newIndex,
-                            sourceListId: sourceListId,
-                            targetListId: sourceListId, // Same list, just re-indexed
-                        });
-                    });
-                    
-                    // after removal
-                }
-
-                if (allChanges.length > 0) {
-                    const finalChanges = filterChanges(allChanges);
-                    changeJsonAttribute.setValue(JSON.stringify(finalChanges));
-                }
-
-                // Note: Items will appear in the list after datasource updates from the onDrop action
-                // Don't add temporary items here to avoid ObjectItem validation errors
-                // setItems will be updated when datasource changes
-            } else {
-                // Non-empty list case - insert at draggedOverItem position
-                let draggedOverIndex = newItems.findIndex(i => i.uuid === draggedOverItem?.uuid);
-
-                if (draggedOverIndex > -1) {
-                    // For "on" drops: no rearrangement in target list
-                    if (currentDropType === 'on') {
-                        // Create change records for items dropped ON without rearranging target list
-                        const allChanges: ChangeRecord[] = [];
-                        
-                        // Add changes for dragged items (dropped ON target)
-                        itemsBeingDragged.forEach(uuid => {
-                            allChanges.push({
-                                uuid: uuid,
-                                newIndex: null, // No index for "on" drops
-                                sourceListId: sourceListId,
-                                targetListId: listId,
-                                dropType: "on",
-                                targetItemUuid: draggedOverItem?.uuid, // UUID of the item dropped ON
-                            });
-                        });
-
-                        // For cross-list "on" drops, we still need to re-index the source list
-                        // Extract and process source list for re-indexing remaining items
-                        if (crossListData?.sourceListAllItems) {
-                            const sourceAllItems = crossListData.sourceListAllItems;
-                            const movedUuids = new Set(itemsBeingDragged);
-                            
-                            // Get remaining items (not being moved) sorted by original index
-                            const remainingItems = sourceAllItems
-                                .filter((item: { uuid: string; originalIndex: number }) => !movedUuids.has(item.uuid))
-                                .sort((a: { uuid: string; originalIndex: number }, b: { uuid: string; originalIndex: number }) => a.originalIndex - b.originalIndex);
-                            
-                            // Re-index remaining items in source list (just new indices, no position/target)
-                            remainingItems.forEach((item: { uuid: string; originalIndex: number }, newIndex: number) => {
-                                allChanges.push({
-                                    uuid: item.uuid,
-                                    newIndex: newIndex,
-                                    sourceListId: sourceListId,
-                                    targetListId: sourceListId,
-                                });
-                            });
-                        }
-
-                        if (allChanges.length > 0) {
-                            const finalChanges = filterChanges(allChanges);
-                            changeJsonAttribute.setValue(JSON.stringify(finalChanges));
-                        }
-                    } else {
-                        // For "before"/"after" drops: normal rearrangement
-                        // Determine insertion point based on drop type (cursor position)
-                        // currentDropType comes from the cursor position during drag-over
-                        let insertPointIndex = draggedOverIndex;
-                        
-                        if (currentDropType === 'after') {
-                            insertPointIndex = draggedOverIndex + 1;
-                        }
-                        // else currentDropType === 'before', insertPointIndex stays at draggedOverIndex
-                        
-                        // For cross-list drops, we need to send newIndex for ALL items:
-                        // 1. Target list items (both new and shifted existing)
-                        // 2. Source list items (remaining items with re-calculated indices)
-                        
-                        // Create a virtual array showing where items will be after insertion
-                        const virtualItems: { uuid: string; isNew: boolean; dropType?: string }[] = [];
-                        
-                        // Add existing items up to insert point
-                        for (let i = 0; i < insertPointIndex; i++) {
-                            virtualItems.push({ uuid: newItems[i].uuid, isNew: false });
-                        }
-                        
-                        // Add the dragged items (in order they were dragged)
-                        itemsBeingDragged.forEach(uuid => {
-                            virtualItems.push({ uuid: uuid, isNew: true, dropType: currentDropType || 'after' });
-                        });
-                        
-                        // Add remaining items
-                        for (let i = insertPointIndex; i < newItems.length; i++) {
-                            virtualItems.push({ uuid: newItems[i].uuid, isNew: false });
-                        }
-
-                        // Generate changes for ALL items that need re-indexing
-                        const allChanges: ChangeRecord[] = [];
-                        
-                        // Target list changes: all items in virtual array
-                        virtualItems.forEach((item, newIndex) => {
-                            if (item.isNew) {
-                                // New dragged items from source list
-                                const changeRecord: ChangeRecord = {
-                                    uuid: item.uuid,
-                                    newIndex: newIndex,
-                                    sourceListId: sourceListId,
-                                    targetListId: listId,
-                                    dropType: (currentDropType || 'after') as "before" | "after" | "on",
-                                    targetItemUuid: draggedOverItem?.uuid,
-                                };
-                                allChanges.push(changeRecord);
-                            } else {
-                                // Existing items in target list that may have shifted (just new indices, no position/target)
-                                const existingItem = newItems.find(i => i.uuid === item.uuid);
-                                if (existingItem && existingItem.originalIndex !== newIndex) {
-                                    allChanges.push({
-                                        uuid: item.uuid,
-                                        newIndex: newIndex,
-                                        sourceListId: listId,
-                                        targetListId: listId,
-                                    });
-                                }
-                            }
-                        });
-
-                        // Source list changes: remaining items need to be re-indexed
-                        // Extract and process source list for re-indexing remaining items
-                        if (crossListData?.sourceListAllItems) {
-                            const sourceAllItems = crossListData.sourceListAllItems;
-                            const movedUuids = new Set(itemsBeingDragged);
-                            
-                            // Get remaining items (not being moved) sorted by original index
-                            const remainingItems = sourceAllItems
-                                .filter((item: { uuid: string; originalIndex: number }) => !movedUuids.has(item.uuid))
-                                .sort((a: { uuid: string; originalIndex: number }, b: { uuid: string; originalIndex: number }) => a.originalIndex - b.originalIndex);
-                            
-                            // Re-index remaining items (just new indices, no position/target)
-                            remainingItems.forEach((item: { uuid: string; originalIndex: number }, newIndex: number) => {
-                                allChanges.push({
-                                    uuid: item.uuid,
-                                    newIndex: newIndex,
-                                    sourceListId: sourceListId,
-                                    targetListId: sourceListId, // Same list, just re-indexed
-                                });
-                            });
-                        }
-
-                        if (allChanges.length > 0) {
-                            const finalChanges = filterChanges(allChanges);
-                            changeJsonAttribute.setValue(JSON.stringify(finalChanges));
-                        }
-                    }
-                }
-            }
+            handleCrossListDrop(itemsBeingDragged, sourceListId, crossListData?.sourceListAllItems);
         } else {
-            // SAME-LIST REORDERING
-            // Check if same-list drop is allowed (listId must be in allowedLists)
-            const allowedListsStr = allowedLists || "";
-            if (!isDropAllowed(allowedListsStr, listId, listId)) {
-                setDraggedItems([]);
-                setDraggedOverItem(null);
-                return;
-            }
-            
-            // draggedOverItem is guaranteed to exist at this point (checked in validation)
-            const draggedOverItemSafe = draggedOverItem!; // Non-null assertion safe here
-            
-            // Prevent dragging item onto itself
-            if (draggedItems.some(i => i.uuid === draggedOverItemSafe.uuid)) {
-                setDraggedItems([]);
-                setDraggedOverItem(null);
-                return;
-            }
-
-            // Create a new array with reordered items
-            const newItems = [...items];
-            let draggedOverIndex = newItems.findIndex(i => i.uuid === draggedOverItemSafe.uuid);
-
-            if (draggedOverIndex > -1) {
-                // Remove all dragged items from their current positions
-                const draggedIndices: number[] = [];
-                draggedItems.forEach(draggedItem => {
-                    const idx = newItems.findIndex(i => i.uuid === draggedItem.uuid);
-                    if (idx > -1) {
-                        draggedIndices.push(idx);
-                    }
-                });
-
-                // Sort indices in descending order to remove from end first
-                // This prevents index shifting issues
-                draggedIndices.sort((a, b) => b - a);
-                const removed: DragItem[] = [];
-                draggedIndices.forEach(idx => {
-                    removed.unshift(...newItems.splice(idx, 1));
-                });
-
-                // For "on" drops: don't rearrange, just put items back in original positions
-                // For "before"/"after" drops: rearrange items
-                if (currentDropType !== 'on') {
-                    // Determine insertion point based on drop type (cursor position)
-                    // currentDropType comes from the cursor position during drag-over
-                    let insertIndex = newItems.findIndex(i => i.uuid === draggedOverItemSafe.uuid);
-                    if (insertIndex > -1) {
-                        let finalInsertIndex = insertIndex;
-                        
-                        if (currentDropType === 'after') {
-                            finalInsertIndex = insertIndex + 1;
-                        }
-                        // else currentDropType === 'before', finalInsertIndex stays at insertIndex
-                        
-                        newItems.splice(finalInsertIndex, 0, ...removed);
-                    }
-                } else {
-                    // For "on" drops: put all removed items back at the end (restore original state)
-                    // This ensures no rearrangement happens
-                    newItems.push(...removed);
-                }
-
-                // Calculate changes and generate JSON for onDrop action
-                const changes: ChangeRecord[] = [];
-
-                if (currentDropType === 'on') {
-                    // For "on" drops: No rearrangement, just track that items were dropped ON target
-                    draggedItems.forEach(draggedItem => {
-                        changes.push({
-                            uuid: draggedItem.uuid,
-                            newIndex: null, // No index change for "on" drops
-                            sourceListId: listId,
-                            targetListId: listId,
-                            dropType: "on",
-                            targetItemUuid: draggedOverItemSafe.uuid, // UUID of the item dropped ON
-                        });
-                    });
-                } else {
-                    // For "before"/"after" drops: Track position changes
-                    const draggedUuids = new Set(draggedItems.map(i => i.uuid));
-                    newItems.forEach((item, newIndex) => {
-                        // Track changes if position changed from original
-                        if (item.originalIndex !== newIndex) {
-                            const changeRecord: ChangeRecord = {
-                                uuid: item.uuid,
-                                newIndex: newIndex,
-                                sourceListId: listId,
-                                targetListId: listId,
-                            };
-                            // Only include dropType and targetItemUuid for items that were actually dragged
-                            if (draggedUuids.has(item.uuid)) {
-                                changeRecord.dropType = (currentDropType || 'after') as "before" | "after" | "on";
-                                changeRecord.targetItemUuid = draggedOverItemSafe.uuid;
-                            }
-                            changes.push(changeRecord);
-                        }
-                    });
-                }
-
-                /**
-                 * Set the JSON changes to context attribute
-                 * 
-                 * For same-list drops:
-                 * - Always trigger onDrop if dropType === 'on' (dropping ON another item)
-                 * - Only trigger onDrop if sortingAttribute is provided (for before/after drops)
-                 * 
-                 * For cross-list drops: Always trigger (handled separately above)
-                 * 
-                 * Mendix automatically triggers the onChange="onDrop" action
-                 * when changeJsonAttribute is updated
-                 * 
-                 * JSON format: [{ uuid: string, newIndex?: number, sourceListId: string, targetListId: string, dropType?: string }, ...]
-                 */
-                const shouldTriggerAction = changes.length > 0 && (currentDropType === 'on' || sortingAttribute);
-                if (shouldTriggerAction) {
-                    const finalChanges = filterChanges(changes);
-                    changeJsonAttribute.setValue(JSON.stringify(finalChanges));
-                }
-
-                // Update UI to reflect new order
-                setItems(newItems);
-                setSelectedItems(new Set()); // Clear selection after drop
-            }
+            handleSameListDrop();
         }
 
         // Clean up drag state
@@ -677,7 +359,84 @@ export function DragAndDropList({
         setIsDragging(false);
         
         // Clean up all overlay masks to prevent flickering
-        document.querySelectorAll('.drop-overlay-mask').forEach(overlay => overlay.remove());
+        removeAllOverlays();
+    };
+
+    /**
+     * Handle cross-list drop operations
+     */
+    const handleCrossListDrop = (
+        itemsBeingDragged: string[],
+        sourceListId: string,
+        sourceListAllItems?: Array<{ uuid: string; originalIndex: number }>
+    ) => {
+        let allChanges: ChangeRecord[] = [];
+
+        if (items.length === 0) {
+            // Drop to empty list
+            allChanges = handleDropToEmptyList(itemsBeingDragged, sourceListId, listId, sourceListAllItems);
+        } else if (!draggedOverItem) {
+            return; // No target item
+        } else if (currentDropType === 'on') {
+            // Drop ON another item
+            allChanges = handleOnDrop(itemsBeingDragged, sourceListId, listId, draggedOverItem.uuid, sourceListAllItems);
+        } else {
+            // Drop before/after another item
+            const draggedOverIndex = items.findIndex(i => i.uuid === draggedOverItem.uuid);
+            if (draggedOverIndex > -1) {
+                const insertIndex = currentDropType === 'after' ? draggedOverIndex + 1 : draggedOverIndex;
+                allChanges = handleCrossListBeforeAfterDrop(
+                    itemsBeingDragged,
+                    items,
+                    insertIndex,
+                    (currentDropType || 'after') as 'before' | 'after',
+                    sourceListId,
+                    listId,
+                    draggedOverItem.uuid,
+                    sourceListAllItems
+                );
+            }
+        }
+
+        if (allChanges.length > 0) {
+            const finalChanges = filterChanges(allChanges);
+            changeJsonAttribute.setValue(JSON.stringify(finalChanges));
+        }
+    };
+
+    /**
+     * Handle same-list reordering
+     */
+    const handleSameListDrop = () => {
+        // Check if same-list drop is allowed
+        const allowedListsStr = allowedLists || "";
+        if (!isDropAllowed(allowedListsStr, listId, listId)) {
+            return;
+        }
+        
+        const draggedOverItemSafe = draggedOverItem!;
+        
+        // Prevent dragging item onto itself
+        if (draggedItems.some(i => i.uuid === draggedOverItemSafe.uuid)) {
+            return;
+        }
+
+        const { newItems, changes } = handleSameListReorder(
+            draggedItems,
+            items,
+            draggedOverItemSafe,
+            currentDropType,
+            listId
+        );
+
+        const shouldTriggerAction = changes.length > 0 && (currentDropType === 'on' || sortingAttribute);
+        if (shouldTriggerAction) {
+            const finalChanges = filterChanges(changes);
+            changeJsonAttribute.setValue(JSON.stringify(finalChanges));
+        }
+
+        setItems(newItems);
+        setSelectedItems(new Set());
     };
 
 
@@ -851,94 +610,42 @@ export function DragAndDropList({
                                 
                                 const target = e.currentTarget as HTMLElement;
                                 
-                                // Remove overlays from other items (not this one)
-                                document.querySelectorAll('.drop-overlay-mask').forEach(overlay => {
-                                    if (!target.contains(overlay)) {
-                                        overlay.remove();
-                                    }
-                                });
+                                // Remove overlays from other items
+                                removeOtherOverlays(target);
                                 
                                 // Only show overlay if drop is allowed (draggedOverItem is set by handleDragOver)
                                 if (calculatedDropZone && draggedOverItem?.uuid === item.uuid) {
                                     let overlay = target.querySelector('.drop-overlay-mask') as HTMLElement;
                                     
-                                    // Determine color based on drop zone
-                                    const overlayColor = calculatedDropZone === 'before'
-                                        ? (dropBeforeColor?.value || '#e3f2fd')
-                                        : calculatedDropZone === 'on'
-                                        ? (dropOnColor?.value || '#c8e6c9')
-                                        : (dropAfterColor?.value || '#fff9c4');
+                                    // Get overlay color based on drop zone
+                                    const overlayColor = getOverlayColor(
+                                        calculatedDropZone,
+                                        dropBeforeColor,
+                                        dropOnColor,
+                                        dropAfterColor
+                                    );
                                     
                                     // Calculate position based on drop zone and mode
-                                    let top = '0';
-                                    let height = '100%';
+                                    const rect = target.getBoundingClientRect();
+                                    const { top, height } = calculateOverlayPosition(
+                                        calculatedDropZone,
+                                        dropOption,
+                                        allowDropOn,
+                                        rect.height
+                                    );
                                     
-                                    if (dropOption === 'auto') {
-                                        // Auto mode: show overlay only on the specific zone
-                                        const rect = target.getBoundingClientRect();
-                                        const itemHeight = rect.height;
-                                        
-                                        if (allowDropOn) {
-                                            // 3-zone mode
-                                            const thirdHeight = itemHeight / 3;
-                                            if (calculatedDropZone === 'before') {
-                                                top = '0';
-                                                height = `${thirdHeight}px`;
-                                            } else if (calculatedDropZone === 'on') {
-                                                top = `${thirdHeight}px`;
-                                                height = `${thirdHeight}px`;
-                                            } else { // after
-                                                top = `${thirdHeight * 2}px`;
-                                                height = `${thirdHeight}px`;
-                                            }
-                                        } else {
-                                            // 2-zone mode
-                                            const halfHeight = itemHeight / 2;
-                                            if (calculatedDropZone === 'before') {
-                                                top = '0';
-                                                height = `${halfHeight}px`;
-                                            } else { // after
-                                                top = `${halfHeight}px`;
-                                                height = `${halfHeight}px`;
-                                            }
-                                        }
-                                    }
-                                    
+                                    // Create overlay if it doesn't exist
                                     if (!overlay) {
-                                        overlay = document.createElement('div');
-                                        overlay.className = 'drop-overlay-mask';
-                                        overlay.style.cssText = `
-                                            position: absolute;
-                                            left: 0;
-                                            right: 0;
-                                            pointer-events: none;
-                                            z-index: 9999;
-                                            border-radius: 4px;
-                                            transition: top 0.15s ease-out, height 0.15s ease-out, background-color 0.15s ease-out, opacity 0.15s ease-out;
-                                            opacity: 0;
-                                        `;
-                                        target.style.position = 'relative';
-                                        target.appendChild(overlay);
-                                        
-                                        // Trigger reflow to enable transition
-                                        overlay.offsetHeight;
+                                        overlay = createOverlayElement(target);
                                     }
                                     
-                                    // Update overlay properties - transitions will animate the changes
-                                    overlay.style.top = top;
-                                    overlay.style.height = height;
-                                    overlay.style.backgroundColor = overlayColor;
-                                    overlay.style.opacity = '0.7';
+                                    // Update overlay appearance with smooth transitions
+                                    updateOverlay(overlay, { color: overlayColor, top, height });
                                 } else {
-                                    // Fade out and remove overlay from current item if drop not allowed or no drop zone
+                                    // Fade out and remove overlay if drop not allowed or no drop zone
                                     const overlay = target.querySelector('.drop-overlay-mask') as HTMLElement;
                                     if (overlay) {
-                                        overlay.style.opacity = '0';
-                                        setTimeout(() => {
-                                            if (overlay.parentNode) {
-                                                overlay.remove();
-                                            }
-                                        }, 150); // Match transition duration
+                                        removeOverlay(overlay);
                                     }
                                 }
                             }}
@@ -992,7 +699,7 @@ export function DragAndDropList({
                                 setSelectedItems(new Set()); // Clear selection after drag
                                 
                                 // Clean up all overlay masks to prevent flickering
-                                document.querySelectorAll('.drop-overlay-mask').forEach(overlay => overlay.remove());
+                                removeAllOverlays();
                                 
                                 // Clear drag context attributes from the list container
                                 const listContainer = document.querySelector('.drag-and-drop-list[data-drag-source-list]') as HTMLElement;

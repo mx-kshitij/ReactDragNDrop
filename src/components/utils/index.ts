@@ -7,3 +7,19 @@ export { getDragContextFromDOM, setDragContextOnDOM, clearDragContextFromDOM } f
 export { initializeItems, isDraggedItem } from "./itemUtils";
 export { parseDragData, serializeDragData } from "./dragData";
 export type { DragDataTransfer } from "./dragData";
+export {
+    calculateOverlayPosition,
+    getOverlayColor,
+    createOverlayElement,
+    updateOverlay,
+    removeOverlay,
+    removeOtherOverlays,
+    removeAllOverlays,
+} from "./overlayManager";
+export {
+    generateSourceListReindexing,
+    handleDropToEmptyList,
+    handleOnDrop,
+    handleCrossListBeforeAfterDrop,
+    handleSameListReorder,
+} from "./dropHandlers";
