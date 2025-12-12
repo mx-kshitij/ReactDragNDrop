@@ -3,6 +3,7 @@
  */
 
 import { ListValue, ListAttributeValue } from "mendix";
+import Big from "big.js";
 import { DragItem } from "../types";
 
 /**
@@ -22,7 +23,7 @@ import { DragItem } from "../types";
  */
 export function initializeItems(
     dataSource: ListValue | undefined,
-    uuidAttribute: ListAttributeValue<string>,
+    uuidAttribute: ListAttributeValue<string | Date | Big>,
     sortingAttribute: ListAttributeValue<any> | undefined,
     listId: string
 ): DragItem[] {

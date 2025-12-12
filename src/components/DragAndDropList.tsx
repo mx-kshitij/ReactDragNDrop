@@ -675,6 +675,9 @@ export function DragAndDropList({
         setDraggedItems([]);
         setDraggedOverItem(null);
         setIsDragging(false);
+        
+        // Clean up all overlay masks to prevent flickering
+        document.querySelectorAll('.drop-overlay-mask').forEach(overlay => overlay.remove());
     };
 
 
@@ -807,9 +810,8 @@ export function DragAndDropList({
                             /**
                              * Inline styles for drop target highlighting
                              * 
-                             * Always apply backgroundColor for smooth transitions
-                             * When draggedOverItem matches, use the configured color
-                             * Otherwise, use transparent to smoothly transition back
+                             * Only set backgroundColor when item is being dragged over
+                             * Otherwise use undefined to let CSS handle the default styling
                              * 
                              * Respects selected items: if item is selected, don't override with inline style
                              * Let CSS class handle selected styling instead
@@ -820,13 +822,10 @@ export function DragAndDropList({
                             style={{
                                 backgroundColor: selectedItems.has(item.uuid)
                                     ? undefined
-                                    : draggedOverItem?.uuid === item.uuid
-                                        ? (dropIndicatorPosition === 'before'
-                                            ? (dropBeforeColor?.value || '#e3f2fd')
-                                            : dropIndicatorPosition === 'on'
-                                            ? (dropOnColor?.value || '#c8e6c9')
-                                            : (dropAfterColor?.value || '#fff9c4'))
-                                        : 'transparent',
+                                    : undefined, // All drop feedback now handled by overlay mask
+                                '--drop-overlay-color': draggedOverItem?.uuid === item.uuid && dropIndicatorPosition === 'on'
+                                    ? (dropOnColor?.value || '#c8e6c9')
+                                    : 'transparent',
                                 padding: '10px 12px',
                                 borderRadius: '4px',
                                 transition: 'background-color 0.3s ease',
@@ -849,6 +848,81 @@ export function DragAndDropList({
                                 const calculatedDropZone = getDropZone(e.currentTarget, e.clientY);
                                 setDropIndicatorPosition(calculatedDropZone);
                                 setCurrentDropType(calculatedDropZone);
+                                
+                                const target = e.currentTarget as HTMLElement;
+                                
+                                // Remove overlays from other items (not this one)
+                                document.querySelectorAll('.drop-overlay-mask').forEach(overlay => {
+                                    if (!target.contains(overlay)) {
+                                        overlay.remove();
+                                    }
+                                });
+                                
+                                // Only show overlay if drop is allowed (draggedOverItem is set by handleDragOver)
+                                if (calculatedDropZone && draggedOverItem?.uuid === item.uuid) {
+                                    let overlay = target.querySelector('.drop-overlay-mask') as HTMLElement;
+                                    
+                                    // Determine color based on drop zone
+                                    const overlayColor = calculatedDropZone === 'before'
+                                        ? (dropBeforeColor?.value || '#e3f2fd')
+                                        : calculatedDropZone === 'on'
+                                        ? (dropOnColor?.value || '#c8e6c9')
+                                        : (dropAfterColor?.value || '#fff9c4');
+                                    
+                                    // Calculate position based on drop zone and mode
+                                    let overlayPosition = '';
+                                    if (dropOption === 'auto') {
+                                        // Auto mode: show overlay only on the specific zone
+                                        const rect = target.getBoundingClientRect();
+                                        const height = rect.height;
+                                        
+                                        if (allowDropOn) {
+                                            // 3-zone mode
+                                            const thirdHeight = height / 3;
+                                            if (calculatedDropZone === 'before') {
+                                                overlayPosition = `top: 0; left: 0; right: 0; height: ${thirdHeight}px;`;
+                                            } else if (calculatedDropZone === 'on') {
+                                                overlayPosition = `top: ${thirdHeight}px; left: 0; right: 0; height: ${thirdHeight}px;`;
+                                            } else { // after
+                                                overlayPosition = `top: ${thirdHeight * 2}px; left: 0; right: 0; height: ${thirdHeight}px;`;
+                                            }
+                                        } else {
+                                            // 2-zone mode
+                                            const halfHeight = height / 2;
+                                            if (calculatedDropZone === 'before') {
+                                                overlayPosition = `top: 0; left: 0; right: 0; height: ${halfHeight}px;`;
+                                            } else { // after
+                                                overlayPosition = `top: ${halfHeight}px; left: 0; right: 0; height: ${halfHeight}px;`;
+                                            }
+                                        }
+                                    } else {
+                                        // Forced mode: show overlay on entire item
+                                        overlayPosition = 'top: 0; left: 0; right: 0; bottom: 0;';
+                                    }
+                                    
+                                    if (!overlay) {
+                                        overlay = document.createElement('div');
+                                        overlay.className = 'drop-overlay-mask';
+                                        target.style.position = 'relative';
+                                        target.appendChild(overlay);
+                                    }
+                                    
+                                    overlay.style.cssText = `
+                                        position: absolute;
+                                        ${overlayPosition}
+                                        background-color: ${overlayColor};
+                                        opacity: 0.7;
+                                        pointer-events: none;
+                                        z-index: 9999;
+                                        border-radius: 4px;
+                                    `;
+                                } else {
+                                    // Remove overlay from current item if drop not allowed or no drop zone
+                                    const overlay = target.querySelector('.drop-overlay-mask');
+                                    if (overlay) {
+                                        overlay.remove();
+                                    }
+                                }
                             }}
                             /**
                              * onDragLeave: Clear drop target when user drags away
@@ -861,6 +935,13 @@ export function DragAndDropList({
                                     setDraggedOverItem(null);
                                     setDropIndicatorPosition(null);
                                     setCurrentDropType(null);
+                                    
+                                    // Remove overlay mask
+                                    const target = e.currentTarget as HTMLElement;
+                                    const overlay = target.querySelector('.drop-overlay-mask');
+                                    if (overlay) {
+                                        overlay.remove();
+                                    }
                                 }
                             }}
                             /**
@@ -870,6 +951,14 @@ export function DragAndDropList({
                             onDrop={e => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                
+                                // Remove overlay mask before handling drop
+                                const target = e.currentTarget as HTMLElement;
+                                const overlay = target.querySelector('.drop-overlay-mask');
+                                if (overlay) {
+                                    overlay.remove();
+                                }
+                                
                                 handleDragEnd(e);
                             }}
                             /**
@@ -883,6 +972,10 @@ export function DragAndDropList({
                                 setCurrentDropType(null);
                                 setIsDragging(false);
                                 setSelectedItems(new Set()); // Clear selection after drag
+                                
+                                // Clean up all overlay masks to prevent flickering
+                                document.querySelectorAll('.drop-overlay-mask').forEach(overlay => overlay.remove());
+                                
                                 // Clear drag context attributes from the list container
                                 const listContainer = document.querySelector('.drag-and-drop-list[data-drag-source-list]') as HTMLElement;
                                 if (listContainer) {

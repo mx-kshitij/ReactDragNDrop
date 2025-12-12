@@ -18,7 +18,7 @@ export interface DragAndDropListProps {
     /** List of items to display and reorder */
     dataSource: ListValue;
     /** Attribute containing unique identifier for each item */
-    uuidAttribute: ListAttributeValue<string>;
+    uuidAttribute: ListAttributeValue<string | Date | Big>;
     /** Optional: Integer attribute that stores the sort order (read-only in widget). If provided, same-list reordering will trigger onDrop. Leave empty if only cross-list moves should trigger onDrop. */
     sortingAttribute?: ListAttributeValue<any>;
     /** Context attribute to store changes as JSON string */
